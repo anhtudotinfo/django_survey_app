@@ -8,12 +8,19 @@ from django.contrib.auth.mixins import UserPassesTestMixin
 from django.utils.decorators import method_decorator
 from django.shortcuts import redirect, get_object_or_404
 from django.contrib import messages
+from django.http import Http404, FileResponse, HttpResponseForbidden
+import os
 from accounts.models import Profile
-from djf_surveys.models import Survey, UserAnswer, UserAnswer2, Question, Question2, TYPE_FIELD, Answer2, UserRating
+from djf_surveys.models import (
+    Survey, UserAnswer, UserAnswer2, Question, Question2, 
+    TYPE_FIELD, Answer2, UserRating, Section
+)
 from djf_surveys.forms import CreateSurveyForm, EditSurveyForm
 from djf_surveys.mixin import ContextTitleMixin
 from djf_surveys import app_settings
 from djf_surveys.utils import NewPaginator
+from djf_surveys.navigation import SectionNavigator
+from djf_surveys.draft_service import DraftService
 
 
 class SurveyListView(ContextTitleMixin, UserPassesTestMixin, ListView):
@@ -37,7 +44,7 @@ class SurveyListView(ContextTitleMixin, UserPassesTestMixin, ListView):
         return object_list
 
     # def get_template_names(self):
-    #     """Staff foydalanuvchilar uchun admin sahifasini ochish"""
+    #     """Open admin page for staff users"""
     #     if self.request.user.is_authenticated and self.request.user.is_staff:
     #         return ["djf_surveys/admins/survey_list.html"]
     #     return ["djf_surveys/survey_list.html"]
@@ -125,10 +132,191 @@ class CreateSurveyFormView(ContextTitleMixin, SurveyFormView):
             messages.warning(request, gettext("Siz ushbu so'rovnomani topshirdingiz."))
             return redirect("djf_surveys:index")
         return super().dispatch(request, *args, **kwargs)
+    
+    def get_current_section(self):
+        """Get current section from GET parameter or determine first section."""
+        survey = self.get_object()
+        navigator = SectionNavigator(survey)
+        
+        # Try to get section from URL parameter
+        section_id = self.request.GET.get('section')
+        if section_id:
+            try:
+                return Section.objects.get(id=section_id, survey=survey)
+            except Section.DoesNotExist:
+                pass
+        
+        # Check for draft
+        draft = DraftService.load_draft(
+            survey=survey,
+            user=self.request.user if self.request.user.is_authenticated else None,
+            session_key=self.request.session.session_key
+        )
+        if draft and draft.current_section:
+            return draft.current_section
+        
+        # Return first section
+        return navigator.get_first_section()
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        survey = self.get_object()
+        current_section = self.get_current_section()
+        navigator = SectionNavigator(survey)
+        
+        # Get session key for anonymous users
+        session_key = None
+        if not self.request.user.is_authenticated:
+            session_key = self.request.session.session_key
+        
+        # Add section navigation context
+        if current_section:
+            context['current_section'] = current_section
+            context['is_first_section'] = navigator.is_first_section(current_section)
+            
+            # Get draft to check for answers
+            draft = DraftService.load_draft(
+                survey=survey,
+                user=self.request.user if self.request.user.is_authenticated else None,
+                session_key=session_key
+            )
+            answers = draft.data if draft else {}
+            
+            context['is_last_section'] = navigator.is_last_section(current_section, answers)
+            current_pos, total = navigator.get_section_progress(current_section)
+            context['section_progress'] = {
+                'current': current_pos,
+                'total': total,
+                'percentage': int((current_pos / total) * 100) if total > 0 else 0
+            }
+        
+        # Check for existing draft
+        draft = DraftService.load_draft(
+            survey=survey,
+            user=self.request.user if self.request.user.is_authenticated else None,
+            session_key=session_key
+        )
+        if draft:
+            context['has_draft'] = True
+            context['draft'] = draft
+        
+        return context
 
     def get_form(self, form_class=None):
         form_class = form_class or self.get_form_class()
-        return form_class(survey=self.get_object(), user=self.request.user, **self.get_form_kwargs())
+        current_section = self.get_current_section()
+        return form_class(
+            survey=self.get_object(),
+            user=self.request.user,
+            current_section=current_section,
+            **self.get_form_kwargs()
+        )
+    
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        form = self.get_form()
+        
+        if form.is_valid():
+            # Determine action: save_draft, next, previous, or submit
+            action = request.POST.get('action', 'next')
+            
+            if action == 'save_draft':
+                # Save as draft
+                return self.save_draft(form)
+            elif action == 'previous':
+                # Navigate to previous section
+                return self.navigate_previous()
+            elif action in ['next', 'submit']:
+                # Save draft and navigate or submit
+                return self.handle_next_or_submit(form, action)
+        
+        return self.form_invalid(form)
+    
+    def save_draft(self, form):
+        """Save current progress as draft."""
+        survey = self.get_object()
+        current_section = self.get_current_section()
+        
+        # Ensure session exists for anonymous users
+        if not self.request.user.is_authenticated:
+            if not self.request.session.session_key:
+                self.request.session.create()
+        
+        # Extract answers from form
+        answers = DraftService.extract_answers_from_form(form.cleaned_data)
+        
+        # Save draft
+        DraftService.save_draft(
+            survey=survey,
+            data=answers,
+            user=self.request.user if self.request.user.is_authenticated else None,
+            session_key=self.request.session.session_key if not self.request.user.is_authenticated else None,
+            current_section=current_section
+        )
+        
+        messages.success(self.request, _("Draft saved successfully"))
+        return redirect(self.request.path + f'?section={current_section.id}')
+    
+    def navigate_previous(self):
+        """Navigate to previous section."""
+        current_section = self.get_current_section()
+        if not current_section:
+            return redirect(self.request.path)
+        
+        navigator = SectionNavigator(self.get_object())
+        previous_section = navigator.get_previous_section(current_section)
+        
+        if previous_section:
+            return redirect(self.request.path + f'?section={previous_section.id}')
+        
+        messages.warning(self.request, _("Already at first section"))
+        return redirect(self.request.path + f'?section={current_section.id}')
+    
+    def handle_next_or_submit(self, form, action):
+        """Handle next section navigation or final submission."""
+        survey = self.get_object()
+        current_section = self.get_current_section()
+        
+        # Ensure session exists for anonymous users
+        if not self.request.user.is_authenticated:
+            if not self.request.session.session_key:
+                self.request.session.create()
+        
+        # If survey has sections, use navigation logic
+        if current_section:
+            navigator = SectionNavigator(survey)
+            
+            # Extract and save answers to draft first
+            answers = DraftService.extract_answers_from_form(form.cleaned_data)
+            draft = DraftService.save_draft(
+                survey=survey,
+                data=answers,
+                user=self.request.user if self.request.user.is_authenticated else None,
+                session_key=self.request.session.session_key if not self.request.user.is_authenticated else None,
+                current_section=current_section
+            )
+            
+            # Determine next section based on branch logic
+            next_section = navigator.get_next_section(current_section, draft.data)
+            
+            if next_section and action == 'next':
+                # Navigate to next section
+                return redirect(self.request.path + f'?section={next_section.id}')
+        
+        # Final submission (no sections or last section)
+        try:
+            form.save()
+            # Delete draft after successful submission
+            DraftService.delete_draft(
+                survey=survey,
+                user=self.request.user if self.request.user.is_authenticated else None,
+                session_key=self.request.session.session_key if not self.request.user.is_authenticated else None
+            )
+            messages.success(self.request, _("Survey submitted successfully"))
+            return redirect(self.get_success_url())
+        except Exception as e:
+            messages.error(self.request, f"Error: {str(e)}")
+            return self.form_invalid(form)
 
     def get_title_page(self):
         return self.get_object().name
@@ -257,4 +445,45 @@ def share_link(request, slug):
 class SuccessPageSurveyView(ContextTitleMixin, DetailView):
     model = Survey
     template_name = "djf_surveys/success-page.html"
-    title_page = _("Muvaffaqiyatli yuborildi!")
+    title_page = _("Successfully submitted!")
+
+
+@login_required
+def download_survey_file(request, answer_id):
+    """
+    Protected view to download survey file uploads.
+    Only accessible by survey admins or file owner.
+    """
+    from djf_surveys.models import Answer
+    
+    try:
+        answer = Answer.objects.select_related(
+            'user_answer__survey', 'user_answer__user', 'question'
+        ).get(id=answer_id)
+    except Answer.DoesNotExist:
+        raise Http404("File not found")
+    
+    # Check permissions
+    survey = answer.user_answer.survey
+    user = request.user
+    
+    # Allow if: superuser, staff, survey owner, or response owner
+    is_admin = user.is_superuser or user.is_staff
+    is_owner = answer.user_answer.user == user
+    is_public_response = not survey.private_response
+    
+    if not (is_admin or is_owner or is_public_response):
+        return HttpResponseForbidden("You don't have permission to access this file")
+    
+    # Check if file exists
+    if not answer.file_value:
+        raise Http404("No file attached to this answer")
+    
+    file_path = answer.file_value.path
+    if not os.path.exists(file_path):
+        raise Http404("File not found on server")
+    
+    # Serve file
+    response = FileResponse(open(file_path, 'rb'))
+    response['Content-Disposition'] = f'attachment; filename="{os.path.basename(file_path)}"'
+    return response

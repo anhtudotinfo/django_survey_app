@@ -1,0 +1,26 @@
+{% load i18n %}
+
+<!-- Progress Bar Component -->
+{% if current_section %}
+<div class="mb-6">
+    <!-- Section Info -->
+    <div class="flex justify-between items-center mb-2">
+        <h2 class="text-xl font-semibold text-gray-700">{{ current_section.name }}</h2>
+        <span class="text-sm text-gray-500">
+            {% trans "Section" %} {{ section_progress.current }} {% trans "of" %} {{ section_progress.total }}
+        </span>
+    </div>
+    
+    {% if current_section.description %}
+    <p class="text-gray-600 mb-4">{{ current_section.description }}</p>
+    {% endif %}
+    
+    <!-- Progress Bar -->
+    <div class="w-full bg-gray-200 rounded-full h-2.5">
+        <div class="bg-blue-600 h-2.5 rounded-full transition-all duration-300" 
+             style="width: {{ section_progress.percentage }}%">
+        </div>
+    </div>
+    <p class="text-xs text-gray-500 mt-1 text-right">{{ section_progress.percentage }}% {% trans "complete" %}</p>
+</div>
+{% endif %}

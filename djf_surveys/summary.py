@@ -437,7 +437,7 @@ class SummaryResponse:
         if self.selected_direction is not None:
             qs = qs.filter(user_answer__direction=self.selected_direction)
 
-        # Har bir foydalanuvchi uchun o'rtacha reytingni hisoblash
+        # Calculate average rating for each user
         aggregated_ratings = (
             qs.values("rated_user__first_name", "rated_user__last_name")
                 .annotate(avg_rating=Avg("answer2__value"))

@@ -12,5 +12,6 @@ urlpatterns = [
     path('delete/<int:pk>/', views.DeleteSurveyAnswerView.as_view(), name='delete'),
     path('share/<str:slug>/', views.share_link, name='share_link'),
     path('success/<str:slug>/', views.SuccessPageSurveyView.as_view(), name='success'),
+    path('download/file/<int:answer_id>/', views.download_survey_file, name='download_file'),
     path(SURVEYS_ADMIN_BASE_PATH, include('djf_surveys.admins.urls')),
 ]

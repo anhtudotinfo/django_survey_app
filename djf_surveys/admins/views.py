@@ -221,9 +221,9 @@ class DownloadResponseSurveyView(DetailView):
         header = []
         for index, user_answer in enumerate(user_answers):
             if index == 0:
-                header.append('foydalanuvchi')
-                header.append('yuborilgan vaqti')
-                header.append('kurs nomi')
+                header.append('user')
+                header.append('submitted time')
+                header.append('course name')
 
             rows.append(user_answer.user.username if user_answer.user else 'ro‘yxatdan o‘tmagan')
             rows.append(user_answer.updated_at.strftime("%Y-%m-%d %H:%M:%S"))

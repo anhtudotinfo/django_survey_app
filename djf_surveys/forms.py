@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 from django import forms
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
@@ -6,11 +6,13 @@ from django.core.validators import MaxLengthValidator, MinLengthValidator
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext_lazy as _
 from accounts.models import Profile
-from djf_surveys.models import Answer, TYPE_FIELD, UserAnswer, Question, Direction, Question2, \
-    UserAnswer2, UserRating, Answer2
+from djf_surveys.models import (
+    Answer, TYPE_FIELD, UserAnswer, Question, Direction, Question2,
+    UserAnswer2, UserRating, Answer2, Section
+)
 from djf_surveys.widgets import CheckboxSelectMultipleSurvey, RadioSelectSurvey, DateSurvey, RatingSurvey
 from djf_surveys.app_settings import DATE_INPUT_FORMAT, SURVEY_FIELD_VALIDATORS
-from djf_surveys.validators import RatingValidator
+from djf_surveys.validators import RatingValidator, FileTypeValidator, FileSizeValidator
 
 
 def make_choices(question: Question) -> List[Tuple[str, str]]:
@@ -23,11 +25,18 @@ def make_choices(question: Question) -> List[Tuple[str, str]]:
 
 class BaseSurveyForm(forms.Form):
 
-    def __init__(self, survey, user, *args, **kwargs):
+    def __init__(self, survey, user, current_section: Optional[Section] = None, *args, **kwargs):
         self.survey = survey
-        self.user = user if user.is_authenticated else None
+        self.user = user if (user and hasattr(user, 'is_authenticated') and user.is_authenticated) else None
+        self.current_section = current_section
         self.field_names = []
-        self.questions = self.survey.questions.all().order_by('ordering')
+        
+        # Get questions for current section or all questions if no section
+        if current_section:
+            self.questions = current_section.questions.all().order_by('ordering')
+        else:
+            self.questions = self.survey.questions.all().order_by('ordering')
+        
         super().__init__(*args, **kwargs)
 
         for question in self.questions:
@@ -84,6 +93,11 @@ class BaseSurveyForm(forms.Form):
                                 RatingValidator(int(question.choices))]
                 )
                 self.fields[field_name].widget.num_ratings = int(question.choices)
+            elif question.type_field == TYPE_FIELD.file:
+                self.fields[field_name] = forms.FileField(
+                    label=question.label,
+                    validators=[FileTypeValidator(), FileSizeValidator()]
+                )
             else:
                 self.fields[field_name] = forms.CharField(
                     label=question.label,
@@ -116,22 +130,22 @@ class CreateSurveyForm(BaseSurveyForm):
     direction = forms.ModelChoiceField(
         queryset=Direction.objects.all().order_by('name'),
         required=True,
-        label="O'qiyotgan kursingizni tanlang:",
+        label="Select your course:",
         widget=forms.Select(attrs={
             'class': 'block w-full mt-1 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500'
         })
     )
 
-    def __init__(self, survey, user, *args, **kwargs):
+    def __init__(self, survey, user, current_section=None, *args, **kwargs):
         self.survey = survey
         self.user = user
-        super().__init__(survey=survey, user=user, *args, **kwargs)
+        super().__init__(survey=survey, user=user, current_section=current_section, *args, **kwargs)
 
     @transaction.atomic
     def save(self):
         cleaned_data = super().clean()
 
-        # UserAnswer va UserAnswer2 ni saqlash
+        # Save UserAnswer and UserAnswer2
         user_answer = UserAnswer.objects.create(
             survey=self.survey, user=self.user,
             direction=cleaned_data.get('direction')
@@ -141,16 +155,29 @@ class CreateSurveyForm(BaseSurveyForm):
             direction=cleaned_data.get('direction')
         )
 
-        # Umumiy savollarni saqlash
+        # Save general questions
         for question in self.questions:
             field_name = f'field_survey_{question.id}'
-            if question.type_field == TYPE_FIELD.multi_select:
+            
+            if question.type_field == TYPE_FIELD.file:
+                # Handle file upload
+                file_field = cleaned_data.get(field_name)
+                Answer.objects.create(
+                    question=question,
+                    value='',  # Empty value for file fields
+                    file_value=file_field,
+                    user_answer=user_answer
+                )
+            elif question.type_field == TYPE_FIELD.multi_select:
                 value = ",".join(cleaned_data[field_name])
+                Answer.objects.create(
+                    question=question, value=value, user_answer=user_answer
+                )
             else:
                 value = cleaned_data[field_name]
-            Answer.objects.create(
-                question=question, value=value, user_answer=user_answer
-            )
+                Answer.objects.create(
+                    question=question, value=value, user_answer=user_answer
+                )
 
         # Reyting savollarni saqlash
         for key, val in self.data.items():
@@ -164,7 +191,7 @@ class CreateSurveyForm(BaseSurveyForm):
                     question = get_object_or_404(Question2, id=question_id)
                     profile_obj = Profile.objects.get(id=profile_id)
 
-                    # Chunki model 'UserRating.rated_user' -> ForeignKey(User)
+                    # Because model 'UserRating.rated_user' -> ForeignKey(User)
                     user_rating = UserRating.objects.create(
                         user_answer=user_answer2,
                         rated_user=profile_obj.user  # <-- .user bilan User obyektini oldik
@@ -194,7 +221,15 @@ class EditSurveyForm(BaseSurveyForm):
 
         for answer in answers:
             field_name = f'field_survey_{answer.question.id}'
-            if answer.question.type_field == TYPE_FIELD.multi_select:
+            if field_name not in self.fields:
+                continue  # Skip if question not in current section
+                
+            if answer.question.type_field == TYPE_FIELD.file:
+                # For file fields, we can't set initial in the same way
+                # Just show filename if exists
+                if answer.file_value:
+                    self.fields[field_name].help_text = f"Current file: {answer.file_value.name}"
+            elif answer.question.type_field == TYPE_FIELD.multi_select:
                 self.fields[field_name].initial = answer.value.split(',')
             else:
                 self.fields[field_name].initial = answer.value

@@ -151,7 +151,7 @@ class UsersListView(View):
 
 @login_required
 def edit_profile(request, pk):
-    """Admin (yoki ruxsati bor user) tomonidan boshqa foydalanuvchini tahrirlash"""
+    """Editing another user by admin (or authorized user)"""
     user_obj = get_object_or_404(User, pk=pk)  # user_id bo‘yicha User ni topamiz
     if request.method == 'POST':
         u_form = UserUpdateForm(request.POST, instance=user_obj)

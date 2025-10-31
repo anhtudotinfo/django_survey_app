@@ -14,7 +14,7 @@ SECRET_KEY = config("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config("DEBUG")
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['testserver', 'localhost', '127.0.0.1']
 
 
 # Application definition
@@ -68,17 +68,23 @@ WSGI_APPLICATION = 'moi.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
+# DATABASES = {
+#     "default": {
+#         "ENGINE": "django.db.backends.postgresql",
+#         "NAME": config("DB_NAME"),
+#         "USER": config("DB_USER"),
+#         "PASSWORD": config("DB_PASSWORD"),
+#         "HOST": config("DB_HOST"),
+#         "PORT": config("DB_PORT"),
+#     }
+# }
+
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": config("DB_NAME"),
-        "USER": config("DB_USER"),
-        "PASSWORD": config("DB_PASSWORD"),
-        "HOST": config("DB_HOST"),
-        "PORT": config("DB_PORT"),
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',  # Database file path
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
@@ -144,3 +150,16 @@ SURVEY_PAGINATION_NUMBER = {
     'answer_list': 6,
     'survey_list': 4
 }
+
+# File Upload Settings for Surveys
+SURVEY_FILE_UPLOAD_MAX_SIZE = 10 * 1024 * 1024  # 10MB in bytes
+SURVEY_FILE_ALLOWED_TYPES = [
+    'jpg', 'jpeg', 'png', 'gif',  # Images
+    'pdf',  # PDF
+    'doc', 'docx',  # Word
+    'xls', 'xlsx',  # Excel
+]
+SURVEY_DRAFT_EXPIRY_DAYS = 30  # Days until draft expires
+
+# Allow anonymous users to view survey list
+SURVEY_ANONYMOUS_VIEW_LIST = True

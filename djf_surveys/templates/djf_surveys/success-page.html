@@ -20,13 +20,13 @@
                 {% if object.success_page_content %}
                     {{ object.success_page_content|safe }}
                 {% else %}
-                    {% trans "Sizning sa'y-harakatlaringiz va so'rovnomani to'ldirishga ajratgan vaqtingizni juda qadrlaymiz. Sizning javoblaringiz bizga yordam beradi." %}
+                    {% trans "We greatly appreciate your efforts and the time you spent filling out this survey. Your responses help us." %}
                 {% endif %}
             </p>
 
             <div class="flex justify-center py-6">
                 <a href="{{ link_back_on_success_page }}" class="block mt-5 px-5 py-3 text-sm font-medium text-white bg-blue-500 rounded-lg">
-                    {% trans "Ortga" %}
+                    {% trans "Back" %}
                 </a>
             </div>
         </div>

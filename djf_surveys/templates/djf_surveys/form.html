@@ -15,10 +15,16 @@
                 {{ sub_title_page }}
             </p>
 
-            <form method="post">
+            <!-- Draft Resume Banner -->
+            {% include "djf_surveys/components/draft_resume_banner.html" %}
+
+            <!-- Section Progress Bar -->
+            {% include "djf_surveys/components/section_progress.html" %}
+
+            <form method="post" enctype="multipart/form-data">
                 {% csrf_token %}
 
-                <h2 class="text-xl font-semibold mt-6">Umumiy savollar</h2>
+                <h2 class="text-xl font-semibold mt-6">General Questions</h2>
 
                 {% for field in form %}
                     <div class="p-8 mt-6 mb-0 space-y-4 rounded-lg shadow-md border border-gray-200 bg-white">
@@ -85,9 +91,8 @@
                     </div>
                 {% endfor %}
 
-                <button type="submit" class="block w-full mt-5 px-5 py-3 text-xl font-medium text-white bg-blue-500 rounded-lg">
-                    {% trans "Yuborish" %}
-                </button>
+                <!-- Section Navigation Buttons -->
+                {% include "djf_surveys/components/section_navigation.html" %}
             </form>
         </div>
     </div>
