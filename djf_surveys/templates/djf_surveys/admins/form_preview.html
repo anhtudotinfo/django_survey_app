@@ -163,7 +163,7 @@
                             </label>
                         </li>
                     {% empty %}
-                        <li class="px-6 py-4">Foydalanuvchilar topilmadi!</li>
+                        <li class="px-6 py-4">Userlar topilmadi!</li>
                     {% endfor %}
                 </ul>
             </div>
@@ -248,13 +248,13 @@
                     dataType: 'json',
                     success: function(response) {
                         if(response.status === 'success') {
-                            console.log(`Foydalanuvchi ${userId} baholanishi mumkin: ${response.can_be_rated}`);
+                            console.log(`User ${userId} baholanishi mumkin: ${response.can_be_rated}`);
                         } else {
                             alert(response.message);
                         }
                     },
                     error: function(xhr, status, error) {
-                        alert("{% trans 'Foydalanuvchi holatini yangilashda xato sodir bo‘ldi.' %}");
+                        alert("{% trans 'User holatini yangilashda xato sodir bo‘ldi.' %}");
                         // Optionally, revert the checkbox state
                         location.reload();
                     }

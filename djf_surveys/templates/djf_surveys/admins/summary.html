@@ -35,7 +35,7 @@
                 <div class="flex flex-col flex-1">
                     <label for="direction" class="mb-2 text-gray-700 font-semibold">Kursni tanlang:</label>
                     <select name="direction" id="direction" class="block w-full bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 p-2">
-                        <option value="">Kurslar</option>
+                        <option value="">{% trans "Courses" %}</option>
                         {% for direction in directions %}
                             <option value="{{ direction.id }}" {% if direction.id == selected_direction.id %}selected{% endif %}>
                                 {{ direction.name }}
@@ -72,7 +72,7 @@
 
                 <!-- Submit Button -->
                 <div class="flex flex-col">
-                    <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full mt-6 md:mt-0" type="submit">Natija</button>
+                    <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full mt-6 md:mt-0" type="submit">{% trans "Results" %}</button>
                 </div>
             </div>
         </form>

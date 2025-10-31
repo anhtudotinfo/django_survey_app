@@ -1,13 +1,14 @@
 {% extends "djf_surveys/master.html" %}
-{% block title %}Chiqish{% endblock title %}
+{% load i18n %}
+{% block title %}Logout{% endblock title %}
 {% block content %}
 <div class="max-w-md mx-auto mt-10 bg-white p-8 rounded shadow text-center">
-    <h2 class="text-2xl font-semibold mb-6">Chiqish</h2>
-    <p class="mb-6">Rostdan ham tizimdan chiqmoqchimisiz?</p>
+    <h2 class="text-2xl font-semibold mb-6">Logout</h2>
+    <p class="mb-6">Are you sure you want to log out?</p>
     <form method="post" class="flex justify-center space-x-4">
         {% csrf_token %}
-        <button type="submit" class="bg-red-600 text-white py-2 px-4 rounded hover:bg-red-700">Ha, chiqish</button>
-        <a href="{% url 'djf_surveys:index' %}" class="bg-gray-300 text-gray-700 py-2 px-4 rounded hover:bg-gray-400">Bekor qilish</a>
+        <button type="submit" class="bg-red-600 text-white py-2 px-4 rounded hover:bg-red-700">Yes, Log out</button>
+        <a href="{% url 'djf_surveys:index' %}" class="bg-gray-300 text-gray-700 py-2 px-4 rounded hover:bg-gray-400">Cancel</a>
     </form>
 </div>
 {% endblock %}

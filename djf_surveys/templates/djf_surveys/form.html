@@ -1,5 +1,5 @@
 {% extends get_master_template %}
-{% load djf_survey_tags i18n static %}
+{% load i18n djf_survey_tags i18n static %}
 
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'djf_surveys/te-starter/css/tw-elements.min.css' %}">
@@ -50,7 +50,7 @@
                             {% if user.department %}
                                 {{ user.department.name }}
                             {% else %}
-                                <span class="text-red-500">Kafedra(sikl) yo'q</span>
+                                <span class="text-red-500">No Department</span>
                             {% endif %}
                         </h3>
 
@@ -58,7 +58,7 @@
                             {% if user.position %}
                                 {{ user.position.name }}
                             {% else %}
-                                <span class="text-red-500">Lavozim yo'q</span>
+                                <span class="text-red-500">No Position</span>
                             {% endif %}
                         </h3>
                         <h3 class="text-xl font-bold">{{ user.rank }}</h3>
@@ -71,7 +71,7 @@
                                 <label class="block text-xl font-medium">{{ question.label }}</label>
                                 <div class="rating">
                                     {% for i in "12345" %}
-                                        <!-- Agar i == "5" bo'lsa, oldindan checked bo'lsin -->
+                                        <!-- If i == "5", it should be checked by default -->
                                         <input type="radio"
                                             id="rating-{{ user.id }}-{{ question.id }}-{{ i }}"
                                             name="rating_{{ user.id }}_{{ question.id }}"
@@ -103,7 +103,7 @@
     <script src="{% static 'djf_surveys/te-starter/js/tw-elements.umd.min.js' %}"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-        // Sahifa yuklanganda, checked bo'lgan rating input'larini topamiz
+        // When page loads, find checked rating inputs
         document.querySelectorAll('.rating input:checked').forEach((input) => {
             // Mavjud change event'ni qo‘lda chaqirib beramiz
             input.dispatchEvent(new Event('change'));
