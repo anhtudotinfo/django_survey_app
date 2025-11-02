@@ -14,9 +14,30 @@ SECRET_KEY = config("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config("DEBUG", default=True, cast=bool)
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='testserver,localhost,127.0.0.1', cast=lambda v: [s.strip() for s in v.split(',')])
+ALLOWED_HOSTS = config('ALLOWED_HOSTS',
+                       default='testserver,localhost,127.0.0.1',
+                       cast=lambda v: [s.strip() for s in v.split(',')])
 
+ALLOWED_HOSTS = [
+    '0.0.0.0', 'localhost', '127.0.0.1', '.replit.dev', '.repl.co', '.pike.replit.dev'
+]
 
+# CSRF Trusted Origins - Dynamic configuration for Replit domains
+CSRF_TRUSTED_ORIGINS = []
+
+# Get Replit domain from environment
+replit_domain = os.environ.get('REPLIT_DEV_DOMAIN')
+if replit_domain:
+    CSRF_TRUSTED_ORIGINS.append(f'https://{replit_domain}')
+
+# Fallback: Accept all common Replit domain patterns
+# This is safe because ALLOWED_HOSTS already restricts which hosts can serve the app
+if not CSRF_TRUSTED_ORIGINS:
+    CSRF_TRUSTED_ORIGINS = [
+        'https://*.replit.dev',
+        'https://*.pike.replit.dev',
+        'https://*.repl.co',
+    ]
 # Application definition
 
 INSTALLED_APPS = [
@@ -66,7 +87,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'moi.wsgi.application'
 
-
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
@@ -93,19 +113,22 @@ DATABASES = {
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        'NAME':
+        'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'NAME':
+        'django.contrib.auth.password_validation.MinimumLengthValidator',
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        'NAME':
+        'django.contrib.auth.password_validation.CommonPasswordValidator',
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        'NAME':
+        'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
-
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.0/topics/i18n/
@@ -117,7 +140,6 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 
 USE_TZ = True
-
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
@@ -149,21 +171,22 @@ LOGIN_URL = 'accounts:login'
 
 LOGOUT_REDIRECT_URL = LOGIN_URL
 
-
 # example override in settings.py
 # default value 12
-SURVEY_PAGINATION_NUMBER = {
-    'answer_list': 6,
-    'survey_list': 4
-}
+SURVEY_PAGINATION_NUMBER = {'answer_list': 6, 'survey_list': 4}
 
 # File Upload Settings for Surveys
 SURVEY_FILE_UPLOAD_MAX_SIZE = 10 * 1024 * 1024  # 10MB in bytes
 SURVEY_FILE_ALLOWED_TYPES = [
-    'jpg', 'jpeg', 'png', 'gif',  # Images
+    'jpg',
+    'jpeg',
+    'png',
+    'gif',  # Images
     'pdf',  # PDF
-    'doc', 'docx',  # Word
-    'xls', 'xlsx',  # Excel
+    'doc',
+    'docx',  # Word
+    'xls',
+    'xlsx',  # Excel
 ]
 SURVEY_DRAFT_EXPIRY_DAYS = 30  # Days until draft expires
 
