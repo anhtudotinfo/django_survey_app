@@ -3,7 +3,7 @@ from django.core.exceptions import ValidationError
 from .models import (
     Survey, Question, Question2, Answer, Answer2, 
     UserAnswer, UserAnswer2, Direction, UserRating,
-    Section, BranchRule, DraftResponse
+    Section, BranchRule, DraftResponse, SiteConfig, SiteConfigChangeLog
 )
 
 
@@ -179,6 +179,160 @@ class BranchRuleAdmin(admin.ModelAdmin):
                 except Section.DoesNotExist:
                     pass
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+
+class SiteConfigChangeLogInline(admin.TabularInline):
+    """Inline display of change logs."""
+    model = SiteConfigChangeLog
+    extra = 0
+    readonly_fields = ('action', 'changed_by', 'created_at', 'notes', 'ip_address')
+    can_delete = False
+    max_num = 10
+    
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(SiteConfig)
+class SiteConfigAdmin(admin.ModelAdmin):
+    """
+    Admin interface for Site Configuration.
+    
+    Features:
+    - Organized fieldsets for easy navigation
+    - Preview functionality
+    - Change logging
+    - Version management
+    """
+    
+    list_display = ('site_name', 'version', 'is_active', 'updated_at', 'action_buttons')
+    list_filter = ('is_active', 'enable_user_registration', 'enable_anonymous_surveys')
+    search_fields = ('site_name', 'site_tagline', 'notes')
+    readonly_fields = ('version', 'created_at', 'updated_at', 'preview_colors')
+    inlines = [SiteConfigChangeLogInline]
+    
+    fieldsets = (
+        ('🏢 Site Identity', {
+            'fields': ('is_active', 'site_name', 'site_tagline', 'logo', 'favicon', 'version'),
+            'description': 'Basic site information and branding'
+        }),
+        ('🎨 Colors & Theming', {
+            'fields': ('primary_color', 'secondary_color', 'accent_color', 'preview_colors'),
+            'description': 'Customize site colors (use hex codes like #6366f1)'
+        }),
+        ('🏠 Homepage Content', {
+            'fields': ('homepage_title', 'homepage_subtitle', 'homepage_banner', 'homepage_video_url'),
+            'classes': ('collapse',)
+        }),
+        ('📄 Footer Configuration', {
+            'fields': ('footer_text', 'footer_address', 'footer_phone', 'footer_email'),
+            'classes': ('collapse',)
+        }),
+        ('🌐 Social Media Links', {
+            'fields': ('facebook_url', 'twitter_url', 'instagram_url', 'youtube_url', 'linkedin_url'),
+            'classes': ('collapse',)
+        }),
+        ('📝 Static Pages Content', {
+            'fields': ('about_page_content', 'contact_page_content', 'terms_page_content', 'privacy_page_content'),
+            'classes': ('collapse',),
+            'description': 'Content for static pages (supports HTML)'
+        }),
+        ('⚙️ Feature Toggles', {
+            'fields': ('enable_user_registration', 'enable_anonymous_surveys', 'show_survey_stats'),
+            'classes': ('collapse',)
+        }),
+        ('🔍 SEO & Analytics', {
+            'fields': ('meta_description', 'meta_keywords', 'google_analytics_id'),
+            'classes': ('collapse',)
+        }),
+        ('📋 Admin Notes', {
+            'fields': ('notes',),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def preview_colors(self, obj):
+        """Display color preview swatches."""
+        if obj.pk:
+            html = f'''
+            <div style="display: flex; gap: 15px; margin-top: 10px;">
+                <div>
+                    <div style="width: 100px; height: 40px; background: {obj.primary_color}; border: 1px solid #ddd; border-radius: 4px;"></div>
+                    <small>Primary</small>
+                </div>
+                <div>
+                    <div style="width: 100px; height: 40px; background: {obj.secondary_color}; border: 1px solid #ddd; border-radius: 4px;"></div>
+                    <small>Secondary</small>
+                </div>
+                <div>
+                    <div style="width: 100px; height: 40px; background: {obj.accent_color}; border: 1px solid #ddd; border-radius: 4px;"></div>
+                    <small>Accent</small>
+                </div>
+            </div>
+            '''
+            from django.utils.safestring import mark_safe
+            return mark_safe(html)
+        return "Save to preview colors"
+    preview_colors.short_description = "Color Preview"
+    
+    def action_buttons(self, obj):
+        """Display action buttons."""
+        if obj.pk:
+            html = f'''
+            <div style="display: flex; gap: 5px;">
+                <a href="/admin/djf_surveys/siteconfig/{obj.pk}/change/" 
+                   style="padding: 5px 10px; background: #417690; color: white; text-decoration: none; border-radius: 3px; font-size: 12px;">
+                    ✏️ Edit
+                </a>
+            </div>
+            '''
+            from django.utils.safestring import mark_safe
+            return mark_safe(html)
+        return "-"
+    action_buttons.short_description = "Actions"
+    
+    def get_readonly_fields(self, request, obj=None):
+        """Make version readonly after creation."""
+        if obj:  # Editing an existing object
+            return self.readonly_fields + ('version',)
+        return self.readonly_fields
+    
+    def save_model(self, request, obj, form, change):
+        """Ensure only one config is active."""
+        super().save_model(request, obj, form, change)
+        
+        # Store user in request for logging (via signal)
+        if not hasattr(request, '_site_config_user'):
+            request._site_config_user = request.user
+    
+    def has_delete_permission(self, request, obj=None):
+        """Prevent deletion of active configuration."""
+        if obj and obj.is_active:
+            return False
+        return super().has_delete_permission(request, obj)
+    
+    class Media:
+        css = {
+            'all': ('admin/css/siteconfig.css',)
+        }
+        js = ('admin/js/siteconfig.js',)
+
+
+@admin.register(SiteConfigChangeLog)
+class SiteConfigChangeLogAdmin(admin.ModelAdmin):
+    """Admin for viewing change logs."""
+    list_display = ('config', 'action', 'changed_by', 'created_at', 'ip_address')
+    list_filter = ('action', 'created_at')
+    search_fields = ('config__site_name', 'changed_by__username', 'notes')
+    readonly_fields = ('config', 'changed_by', 'action', 'changes', 'notes', 'ip_address', 'created_at')
+    
+    def has_add_permission(self, request):
+        """No manual creation of logs."""
+        return False
+    
+    def has_delete_permission(self, request, obj=None):
+        """Logs should not be deleted."""
+        return request.user.is_superuser  # Only superusers can delete logs
 
 
 # Customize Admin Site

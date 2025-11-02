@@ -1,12 +1,43 @@
-from djf_surveys import app_settings
-from djf_surveys.utils import get_type_field
+"""
+Context processors for djf_surveys.
+
+These functions inject variables into all templates automatically.
+"""
+
+from djf_surveys.models import SiteConfig
 
 
 def surveys_context(request):
-    context = {
-        'get_master_template': app_settings.SURVEY_MASTER_TEMPLATE,
-        'chart_js_src': app_settings.CHART_JS_SRC,
-        'get_type_field': get_type_field,
-        'link_back_on_success_page': app_settings.SURVEY_LINK_BACK_ON_SUCCESS_PAGE
+    """
+    Legacy context processor for backward compatibility.
+    
+    Provides master template path for templates that use {% extends get_master_template %}.
+    """
+    return {
+        'get_master_template': 'djf_surveys/master.html',
     }
-    return context
+
+
+def site_config(request):
+    """
+    Inject site configuration into all templates.
+    
+    Makes the active SiteConfig available as {{ site_config }} in templates.
+    
+    Usage in templates:
+        {{ site_config.site_name }}
+        {{ site_config.logo.url }}
+        {{ site_config.primary_color }}
+    
+    Returns:
+        dict: Context with site_config key
+    """
+    try:
+        config = SiteConfig.get_active()
+    except Exception:
+        # Fallback if database not ready or no config exists
+        config = None
+    
+    return {
+        'site_config': config
+    }

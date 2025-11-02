@@ -1017,3 +1017,395 @@ def delete_answer_file(sender, instance, **kwargs):
         except Exception:
             pass
 
+
+def upload_site_logo(instance, filename):
+    """Upload path for site logo."""
+    import os
+    from django.utils.text import get_valid_filename
+    
+    # Clean filename
+    name, ext = os.path.splitext(filename)
+    clean_name = get_valid_filename(name)[:30]
+    
+    return f'site_config/logo_{clean_name}{ext}'
+
+
+def upload_site_favicon(instance, filename):
+    """Upload path for site favicon."""
+    import os
+    from django.utils.text import get_valid_filename
+    
+    # Clean filename
+    name, ext = os.path.splitext(filename)
+    clean_name = get_valid_filename(name)[:30]
+    
+    return f'site_config/favicon_{clean_name}{ext}'
+
+
+def upload_homepage_banner(instance, filename):
+    """Upload path for homepage banner."""
+    import os
+    from django.utils.text import get_valid_filename
+    
+    # Clean filename
+    name, ext = os.path.splitext(filename)
+    clean_name = get_valid_filename(name)[:30]
+    
+    return f'site_config/banner_{clean_name}{ext}'
+
+
+class SiteConfig(BaseModel):
+    """
+    Site-wide configuration for customizing the survey system appearance and content.
+    
+    Only one active configuration should exist at a time.
+    Administrators can modify logo, colors, content, and other UI settings.
+    """
+    
+    # Singleton pattern - only one active config
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name=_("Active Configuration"),
+        help_text=_("Only one configuration can be active at a time")
+    )
+    
+    # Site Identity
+    site_name = models.CharField(
+        max_length=200,
+        default="Survey System",
+        verbose_name=_("Site Name"),
+        help_text=_("Website title displayed in header and browser tab")
+    )
+    
+    site_tagline = models.CharField(
+        max_length=500,
+        blank=True,
+        verbose_name=_("Site Tagline"),
+        help_text=_("Short description shown under site name")
+    )
+    
+    logo = models.ImageField(
+        upload_to=upload_site_logo,
+        blank=True,
+        null=True,
+        verbose_name=_("Logo"),
+        help_text=_("Site logo (recommended: 200x60px, PNG with transparency)")
+    )
+    
+    favicon = models.ImageField(
+        upload_to=upload_site_favicon,
+        blank=True,
+        null=True,
+        verbose_name=_("Favicon"),
+        help_text=_("Browser favicon (recommended: 32x32px, PNG or ICO)")
+    )
+    
+    # Colors (for theming)
+    primary_color = models.CharField(
+        max_length=7,
+        default="#6366f1",
+        verbose_name=_("Primary Color"),
+        help_text=_("Main brand color (hex code, e.g., #6366f1)")
+    )
+    
+    secondary_color = models.CharField(
+        max_length=7,
+        default="#8b5cf6",
+        verbose_name=_("Secondary Color"),
+        help_text=_("Secondary accent color (hex code)")
+    )
+    
+    accent_color = models.CharField(
+        max_length=7,
+        default="#ec4899",
+        verbose_name=_("Accent Color"),
+        help_text=_("Accent/highlight color (hex code)")
+    )
+    
+    # Homepage Content
+    homepage_title = models.CharField(
+        max_length=200,
+        default="Welcome to Our Survey Platform",
+        verbose_name=_("Homepage Title"),
+        help_text=_("Main heading on homepage hero section")
+    )
+    
+    homepage_subtitle = models.TextField(
+        blank=True,
+        verbose_name=_("Homepage Subtitle"),
+        help_text=_("Description text under homepage title")
+    )
+    
+    homepage_banner = models.ImageField(
+        upload_to=upload_homepage_banner,
+        blank=True,
+        null=True,
+        verbose_name=_("Homepage Banner"),
+        help_text=_("Hero section background image (recommended: 1920x600px)")
+    )
+    
+    homepage_video_url = models.URLField(
+        blank=True,
+        verbose_name=_("Homepage Video URL"),
+        help_text=_("YouTube or Vimeo video URL for homepage")
+    )
+    
+    # Footer Content
+    footer_text = models.TextField(
+        blank=True,
+        verbose_name=_("Footer Text"),
+        help_text=_("Copyright and contact information")
+    )
+    
+    footer_address = models.TextField(
+        blank=True,
+        verbose_name=_("Address"),
+        help_text=_("Organization address")
+    )
+    
+    footer_phone = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name=_("Phone Number")
+    )
+    
+    footer_email = models.EmailField(
+        blank=True,
+        verbose_name=_("Email")
+    )
+    
+    # Social Media Links
+    facebook_url = models.URLField(blank=True, verbose_name=_("Facebook"))
+    twitter_url = models.URLField(blank=True, verbose_name=_("Twitter"))
+    instagram_url = models.URLField(blank=True, verbose_name=_("Instagram"))
+    youtube_url = models.URLField(blank=True, verbose_name=_("YouTube"))
+    linkedin_url = models.URLField(blank=True, verbose_name=_("LinkedIn"))
+    
+    # Static Pages Content (CMS-like)
+    about_page_content = models.TextField(
+        blank=True,
+        verbose_name=_("About Page Content"),
+        help_text=_("Content for /about page (supports HTML)")
+    )
+    
+    contact_page_content = models.TextField(
+        blank=True,
+        verbose_name=_("Contact Page Content"),
+        help_text=_("Content for /contact page (supports HTML)")
+    )
+    
+    terms_page_content = models.TextField(
+        blank=True,
+        verbose_name=_("Terms & Conditions"),
+        help_text=_("Terms of service content (supports HTML)")
+    )
+    
+    privacy_page_content = models.TextField(
+        blank=True,
+        verbose_name=_("Privacy Policy"),
+        help_text=_("Privacy policy content (supports HTML)")
+    )
+    
+    # Features Toggle
+    enable_user_registration = models.BooleanField(
+        default=True,
+        verbose_name=_("Enable User Registration"),
+        help_text=_("Allow new users to register")
+    )
+    
+    enable_anonymous_surveys = models.BooleanField(
+        default=True,
+        verbose_name=_("Enable Anonymous Surveys"),
+        help_text=_("Allow surveys to accept anonymous responses")
+    )
+    
+    show_survey_stats = models.BooleanField(
+        default=True,
+        verbose_name=_("Show Survey Statistics"),
+        help_text=_("Display survey participation stats on homepage")
+    )
+    
+    # SEO
+    meta_description = models.TextField(
+        blank=True,
+        verbose_name=_("Meta Description"),
+        help_text=_("SEO meta description (160 characters recommended)")
+    )
+    
+    meta_keywords = models.CharField(
+        max_length=500,
+        blank=True,
+        verbose_name=_("Meta Keywords"),
+        help_text=_("SEO keywords, comma-separated")
+    )
+    
+    # Analytics
+    google_analytics_id = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name=_("Google Analytics ID"),
+        help_text=_("GA tracking ID (e.g., G-XXXXXXXXXX)")
+    )
+    
+    # Versioning
+    version = models.PositiveIntegerField(
+        default=1,
+        verbose_name=_("Version"),
+        help_text=_("Configuration version number")
+    )
+    
+    notes = models.TextField(
+        blank=True,
+        verbose_name=_("Admin Notes"),
+        help_text=_("Internal notes about this configuration")
+    )
+    
+    class Meta:
+        verbose_name = _("Site Configuration")
+        verbose_name_plural = _("Site Configurations")
+        ordering = ['-is_active', '-created_at']
+    
+    def __str__(self):
+        status = "ACTIVE" if self.is_active else "Inactive"
+        return f"{self.site_name} (v{self.version}) - {status}"
+    
+    def save(self, *args, **kwargs):
+        """Ensure only one configuration is active at a time."""
+        if self.is_active:
+            # Deactivate all other configs
+            SiteConfig.objects.filter(is_active=True).exclude(id=self.id).update(is_active=False)
+            
+            # Auto-increment version for new configs
+            if not self.pk:
+                latest = SiteConfig.objects.order_by('-version').first()
+                if latest:
+                    self.version = latest.version + 1
+        
+        super().save(*args, **kwargs)
+    
+    @classmethod
+    def get_active(cls):
+        """Get the currently active configuration."""
+        config = cls.objects.filter(is_active=True).first()
+        if not config:
+            # Create default config if none exists
+            config = cls.objects.create(
+                site_name="Survey System",
+                is_active=True
+            )
+        return config
+    
+    def clone(self):
+        """Create a copy of this configuration for versioning."""
+        self.pk = None
+        self.id = None
+        self.is_active = False
+        self.version += 1
+        self.save()
+        return self
+    
+    def get_logo_url(self):
+        """Get logo URL or return None."""
+        if self.logo:
+            return self.logo.url
+        return None
+    
+    def get_favicon_url(self):
+        """Get favicon URL or return None."""
+        if self.favicon:
+            return self.favicon.url
+        return None
+    
+    def get_banner_url(self):
+        """Get homepage banner URL or return None."""
+        if self.homepage_banner:
+            return self.homepage_banner.url
+        return None
+
+
+class SiteConfigChangeLog(BaseModel):
+    """
+    Log all changes made to site configuration for audit trail.
+    """
+    config = models.ForeignKey(
+        SiteConfig,
+        on_delete=models.CASCADE,
+        related_name='change_logs',
+        verbose_name=_("Configuration")
+    )
+    
+    changed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        verbose_name=_("Changed By")
+    )
+    
+    action = models.CharField(
+        max_length=20,
+        choices=[
+            ('created', _('Created')),
+            ('updated', _('Updated')),
+            ('activated', _('Activated')),
+            ('deactivated', _('Deactivated')),
+        ],
+        verbose_name=_("Action")
+    )
+    
+    changes = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name=_("Changes"),
+        help_text=_("JSON object containing field changes")
+    )
+    
+    notes = models.TextField(
+        blank=True,
+        verbose_name=_("Notes")
+    )
+    
+    ip_address = models.GenericIPAddressField(
+        null=True,
+        blank=True,
+        verbose_name=_("IP Address")
+    )
+    
+    class Meta:
+        verbose_name = _("Site Config Change Log")
+        verbose_name_plural = _("Site Config Change Logs")
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.action} by {self.changed_by} at {self.created_at}"
+
+
+# Signal to log SiteConfig changes
+@receiver(models.signals.post_save, sender=SiteConfig)
+def log_site_config_change(sender, instance, created, **kwargs):
+    """Automatically log changes to SiteConfig."""
+    # Skip if we're in a migration or initial setup
+    if kwargs.get('raw', False):
+        return
+    
+    action = 'created' if created else 'updated'
+    
+    # Try to get current user from thread local (set by middleware)
+    # This is a simple implementation - you might want to use django-crum or similar
+    user = None
+    try:
+        from threading import current_thread
+        for attr in dir(current_thread()):
+            if 'user' in attr.lower():
+                user = getattr(current_thread(), attr, None)
+                break
+    except:
+        pass
+    
+    # Create log entry
+    SiteConfigChangeLog.objects.create(
+        config=instance,
+        changed_by=user,
+        action=action,
+        notes=f"Configuration {action}"
+    )
+

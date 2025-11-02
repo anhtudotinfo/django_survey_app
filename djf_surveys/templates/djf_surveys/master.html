@@ -4,7 +4,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ title }}</title>
+    
+    <!-- Dynamic Title -->
+    <title>{{ title|default:site_config.site_name }} - {{ site_config.site_name }}</title>
+    
+    <!-- Favicon -->
+    {% if site_config.favicon %}
+    <link rel="icon" href="{{ site_config.favicon.url }}" type="image/x-icon">
+    {% endif %}
+    
+    <!-- SEO Meta Tags -->
+    {% if site_config.meta_description %}
+    <meta name="description" content="{{ site_config.meta_description }}">
+    {% endif %}
+    {% if site_config.meta_keywords %}
+    <meta name="keywords" content="{{ site_config.meta_keywords }}">
+    {% endif %}
+    
     <link rel="stylesheet" href="{% static 'djf_surveys/te-starter/css/tw-elements.min.css' %}">
     <script src="{% static 'djf_surveys/css/tailwindcss-3.3.1.js' %}"></script>
     <script src="{% static 'djf_surveys/css/tailwindcss-plugin-3.3.1.js' %}"></script>
@@ -13,8 +29,53 @@
     
     <!-- Alpine.js for reactive components -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
+    
+    <!-- Dynamic Colors from Site Config -->
+    <style>
+        :root {
+            --primary-color: {{ site_config.primary_color|default:"#6366f1" }};
+            --secondary-color: {{ site_config.secondary_color|default:"#8b5cf6" }};
+            --accent-color: {{ site_config.accent_color|default:"#ec4899" }};
+        }
+        
+        /* Apply custom colors to common elements */
+        .bg-custom-primary {
+            background-color: var(--primary-color) !important;
+        }
+        
+        .text-custom-primary {
+            color: var(--primary-color) !important;
+        }
+        
+        .border-custom-primary {
+            border-color: var(--primary-color) !important;
+        }
+        
+        .hover\:bg-custom-primary:hover {
+            background-color: var(--primary-color) !important;
+        }
+        
+        .bg-custom-secondary {
+            background-color: var(--secondary-color) !important;
+        }
+        
+        .bg-custom-accent {
+            background-color: var(--accent-color) !important;
+        }
+    </style>
 
     {% block extra_css %}{% endblock %}
+    
+    <!-- Google Analytics -->
+    {% if site_config.google_analytics_id %}
+    <script async src="https://www.googletagmanager.com/gtag/js?id={{ site_config.google_analytics_id }}"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', '{{ site_config.google_analytics_id }}');
+    </script>
+    {% endif %}
 </head>
 <body>
     {% if messages %}
@@ -27,8 +88,17 @@
     <nav class="bg-sky-100 border-gray-200 dark:bg-gray-900 text-xl" x-data="{ open: false }">
       <div class="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto p-2">
       <a href="{% url 'djf_surveys:index' %}" class="flex items-center space-x-3 rtl:space-x-reverse">
-          <img src="{% static 'djf_surveys/images/MOI.png' %}" class="h-[100px]" alt="IIV Malaka oshirish instituti" />
-          <span class="self-center font-semibold whitespace-nowrap md:hover:text-blue-700 md:dark:hover:text-blue-500">IIV Malaka oshirish instituti</span>
+          {% if site_config.logo %}
+          <img src="{{ site_config.logo.url }}" class="h-[100px]" alt="{{ site_config.site_name }}" />
+          {% else %}
+          <img src="{% static 'djf_surveys/images/MOI.png' %}" class="h-[100px]" alt="{{ site_config.site_name }}" />
+          {% endif %}
+          <span class="self-center font-semibold whitespace-nowrap md:hover:text-blue-700 md:dark:hover:text-blue-500">
+            {{ site_config.site_name }}
+            {% if site_config.site_tagline %}
+            <span class="block text-sm font-normal text-gray-600">{{ site_config.site_tagline }}</span>
+            {% endif %}
+          </span>
       </a>
       <div class="flex md:order-2 space-x-3 md:space-x-0 rtl:space-x-reverse">
           <!-- Dropdown container -->
@@ -78,9 +148,13 @@
       </div>
     </nav>
 
-    <div class="container mx-auto">
+    <div class="container mx-auto min-h-screen">
         {% block content %} {% endblock %}
     </div>
+    
+    <!-- Footer -->
+    {% include 'djf_surveys/components/footer.html' %}
+    
     <script src="{% static 'djf_surveys/te-starter/js/tw-elements.umd.min.js' %}"></script>
     {% include 'djf_surveys/components/alert_js.html' %}
     {% block extra_js %}{% endblock %}

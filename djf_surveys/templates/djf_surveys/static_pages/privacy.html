@@ -1,0 +1,59 @@
+{% extends 'djf_surveys/master.html' %}
+{% load i18n static %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 py-12">
+    <!-- Page Header -->
+    <div class="mb-12 text-center">
+        <h1 class="text-4xl font-bold text-gray-900 mb-4">
+            {% trans "Privacy Policy" %}
+        </h1>
+        <p class="text-xl text-gray-600">
+            {% trans "How we collect, use, and protect your information" %}
+        </p>
+    </div>
+    
+    <!-- Content -->
+    <div class="prose prose-lg max-w-none bg-white p-8 rounded-lg shadow-md">
+        {% if content %}
+            {{ content|safe }}
+        {% else %}
+            <div class="bg-green-50 border-l-4 border-green-400 p-4">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/>
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-green-800">
+                            {% trans "Privacy Policy not configured" %}
+                        </h3>
+                        <div class="mt-2 text-sm text-green-700">
+                            <p>{% trans "The Privacy Policy content has not been set up yet." %}</p>
+                            {% if user.is_staff %}
+                            <p class="mt-1">
+                                <a href="/admin/djf_surveys/siteconfig/" class="font-medium underline hover:text-green-600">
+                                    {% trans "Add content in admin panel" %}
+                                </a>
+                            </p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- Back Button -->
+    <div class="mt-12 text-center">
+        <a href="{% url 'djf_surveys:index' %}" 
+           class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-custom-primary hover:opacity-90 transition">
+            <svg class="mr-2 -ml-1 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+            </svg>
+            {% trans "Back to Home" %}
+        </a>
+    </div>
+</div>
+{% endblock %}

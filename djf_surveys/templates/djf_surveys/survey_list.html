@@ -25,15 +25,28 @@
 
 {% block content %}
     <!-- Hero Section -->
-    <div class="hero-gradient text-white py-16 mb-8">
+    <div class="hero-gradient text-white py-16 mb-8" {% if site_config.homepage_banner %}style="background-image: linear-gradient(rgba(102, 126, 234, 0.9), rgba(118, 75, 162, 0.9)), url('{{ site_config.homepage_banner.url }}'); background-size: cover; background-position: center;"{% endif %}>
         <div class="container px-5 mx-auto">
             <div class="text-center">
                 <h1 class="text-4xl md:text-5xl font-bold mb-4">
-                    {% trans "Survey Management System" %}
+                    {{ site_config.homepage_title|default:"Survey Management System" }}
                 </h1>
                 <p class="text-xl md:text-2xl text-purple-100 mb-8">
-                    {% trans "Create, manage, and analyze surveys with ease" %}
+                    {{ site_config.homepage_subtitle|default:"Create, manage, and analyze surveys with ease" }}
                 </p>
+                
+                {% if site_config.homepage_video_url %}
+                <div class="max-w-3xl mx-auto mb-6">
+                    <div class="relative" style="padding-bottom: 56.25%;">
+                        <iframe class="absolute top-0 left-0 w-full h-full rounded-lg shadow-lg" 
+                                src="{{ site_config.homepage_video_url }}" 
+                                frameborder="0" 
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                allowfullscreen>
+                        </iframe>
+                    </div>
+                </div>
+                {% endif %}
                 
                 {% if user.is_authenticated and user.is_staff %}
                 <a href="{% url 'djf_surveys:admin_create_survey' %}" 

@@ -37,20 +37,42 @@
         {% endif %}
     </div>
 
-    <a class="relative block p-8 overflow-hidden border border-gray-100 rounded-lg bg-white" href="{% if user.is_authenticated %}{% url 'djf_surveys:detail' survey.slug %}{% else %}{% url 'djf_surveys:create' survey.slug %}{% endif %}">
-        <span class="absolute inset-x-0 bottom-0 h-2  bg-gradient-to-r from-green-300 via-blue-500 to-purple-600"></span>
-        <div class="justify-between sm:flex">
-            <div>
-                <h5 class="text-xl font-bold text-gray-900">
-                    {{ survey.name }}
-                </h5>
+    <a class="relative block overflow-hidden border border-gray-100 rounded-lg bg-white hover:shadow-lg transition" href="{% if user.is_authenticated %}{% url 'djf_surveys:detail' survey.slug %}{% else %}{% url 'djf_surveys:create' survey.slug %}{% endif %}">
+        <span class="absolute inset-x-0 bottom-0 h-2 bg-gradient-to-r from-green-300 via-blue-500 to-purple-600"></span>
+        
+        <!-- QR Code Section -->
+        <div class="bg-gradient-to-br from-indigo-50 to-purple-50 p-6 flex items-center justify-center border-b border-gray-100">
+            <div class="bg-white p-3 rounded-lg shadow-sm">
+                <img src="{{ survey.generate_qr_code }}" 
+                     alt="QR Code for {{ survey.name }}" 
+                     class="w-32 h-32 object-contain"
+                     loading="lazy">
             </div>
         </div>
+        
+        <!-- Content Section -->
+        <div class="p-6">
+            <div class="justify-between sm:flex">
+                <div>
+                    <h5 class="text-xl font-bold text-gray-900 mb-2">
+                        {{ survey.name }}
+                    </h5>
+                </div>
+            </div>
 
-        <div class="mt-4 sm:pr-8">
-            <p class="text-sm text-gray-500">
-                {{ survey.description }}
-            </p>
+            <div class="mt-2">
+                <p class="text-sm text-gray-500 line-clamp-3">
+                    {{ survey.description }}
+                </p>
+            </div>
+            
+            <!-- QR Info -->
+            <div class="mt-4 flex items-center text-xs text-indigo-600">
+                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path>
+                </svg>
+                <span class="font-medium">Scan QR to access survey</span>
+            </div>
         </div>
     </a>
 </div>

@@ -57,6 +57,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'djf_surveys.context_processors.surveys_context',
+                'djf_surveys.context_processors.site_config',
             ],
         },
     },

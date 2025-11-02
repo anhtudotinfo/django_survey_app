@@ -770,3 +770,48 @@ File Organization:
     messages.success(request, f"Successfully downloaded {added_files} files from survey '{survey.name}'")
     
     return response
+
+
+# Static Pages Views
+def about_page(request):
+    """About page with content from SiteConfig."""
+    from djf_surveys.models import SiteConfig
+    config = SiteConfig.get_active()
+    
+    return render(request, 'djf_surveys/static_pages/about.html', {
+        'title': 'About Us',
+        'content': config.about_page_content if config else '',
+    })
+
+
+def contact_page(request):
+    """Contact page with content from SiteConfig."""
+    from djf_surveys.models import SiteConfig
+    config = SiteConfig.get_active()
+    
+    return render(request, 'djf_surveys/static_pages/contact.html', {
+        'title': 'Contact Us',
+        'content': config.contact_page_content if config else '',
+    })
+
+
+def terms_page(request):
+    """Terms & Conditions page with content from SiteConfig."""
+    from djf_surveys.models import SiteConfig
+    config = SiteConfig.get_active()
+    
+    return render(request, 'djf_surveys/static_pages/terms.html', {
+        'title': 'Terms & Conditions',
+        'content': config.terms_page_content if config else '',
+    })
+
+
+def privacy_page(request):
+    """Privacy Policy page with content from SiteConfig."""
+    from djf_surveys.models import SiteConfig
+    config = SiteConfig.get_active()
+    
+    return render(request, 'djf_surveys/static_pages/privacy.html', {
+        'title': 'Privacy Policy',
+        'content': config.privacy_page_content if config else '',
+    })

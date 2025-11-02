@@ -16,5 +16,12 @@ urlpatterns = [
     path('download/survey-files/<str:slug>/', views.download_survey_files, name='download_survey_files'),
     path('qr/<str:slug>/', views.survey_qr_code, name='survey_qr_code'),
     path('qr/<str:slug>/download/', views.survey_qr_download, name='survey_qr_download'),
+    
+    # Static Pages
+    path('about/', views.about_page, name='about'),
+    path('contact/', views.contact_page, name='contact'),
+    path('terms/', views.terms_page, name='terms'),
+    path('privacy/', views.privacy_page, name='privacy'),
+    
     path(SURVEYS_ADMIN_BASE_PATH, include('djf_surveys.admins.urls')),
 ]
