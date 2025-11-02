@@ -542,6 +542,13 @@ class UserAnswer(BaseModel):
     survey = models.ForeignKey(Survey, on_delete=models.CASCADE, verbose_name=_("survey"))
     user = models.ForeignKey(get_user_model(), blank=True, null=True, on_delete=models.CASCADE, verbose_name=_("user"))
     direction = models.ForeignKey(Direction, on_delete=models.SET_NULL, null=True, blank=True)
+    
+    # Device and security information
+    ip_address = models.GenericIPAddressField(_("IP address"), null=True, blank=True, help_text=_("IP address of the device"))
+    user_agent = models.TextField(_("user agent"), blank=True, null=True, help_text=_("Browser user agent string"))
+    browser = models.CharField(_("browser"), max_length=100, blank=True, null=True, help_text=_("Browser name and version"))
+    os = models.CharField(_("operating system"), max_length=100, blank=True, null=True, help_text=_("Operating system"))
+    device = models.CharField(_("device"), max_length=100, blank=True, null=True, help_text=_("Device type (Desktop, Mobile, Tablet)"))
 
     class Meta:
         verbose_name = _("user answer")
@@ -616,6 +623,23 @@ class Answer(BaseModel):
         
         return ""
     
+    def get_file_local_path(self):
+        """
+        Get absolute local file path on server.
+        For CSV exports and file management.
+        Returns full filesystem path where file is stored.
+        """
+        if self.file_value:
+            try:
+                import os
+                from django.conf import settings
+                # Get the full path
+                file_path = os.path.join(settings.MEDIA_ROOT, self.file_value.name)
+                return file_path
+            except Exception:
+                return ""
+        return ""
+    
     @property
     def get_value_for_csv(self):
         """Get value formatted for CSV export."""
@@ -627,6 +651,26 @@ class Answer(BaseModel):
             return self.value.strip().replace("_", " ").capitalize()
         else:
             return self.value.strip()
+    
+    def get_file_info_for_csv(self, request=None):
+        """
+        Get complete file information for CSV export.
+        Returns: "URL | Local Path" format for file uploads
+        """
+        if self.question.type_field == TYPE_FIELD.file:
+            url = self.get_file_url(request)
+            local_path = self.get_file_local_path()
+            
+            if url and local_path:
+                return f"{url} | {local_path}"
+            elif url:
+                return url
+            elif local_path:
+                return local_path
+            else:
+                return "No file"
+        else:
+            return self.get_value_for_csv
 
 
 class DraftResponse(BaseModel):

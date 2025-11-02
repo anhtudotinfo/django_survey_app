@@ -205,12 +205,76 @@ class CreateSurveyFormView(ContextTitleMixin, SurveyFormView):
     def get_form(self, form_class=None):
         form_class = form_class or self.get_form_class()
         current_section = self.get_current_section()
+        survey = self.get_object()
+        
+        # Get or create UserAnswer for this session
+        user_answer = self._get_or_create_user_answer()
+        
         return form_class(
-            survey=self.get_object(),
+            survey=survey,
             user=self.request.user,
             current_section=current_section,
+            user_answer=user_answer,
             **self.get_form_kwargs()
         )
+    
+    def _get_or_create_user_answer(self):
+        """Get or create UserAnswer for current survey session."""
+        from .utils import capture_device_info
+        
+        survey = self.get_object()
+        device_info = capture_device_info(self.request)
+        
+        if self.request.user.is_authenticated:
+            # Check session first
+            user_answer_id = self.request.session.get(f'survey_{survey.id}_user_answer_id')
+            if user_answer_id:
+                try:
+                    return UserAnswer.objects.get(id=user_answer_id, user=self.request.user)
+                except UserAnswer.DoesNotExist:
+                    pass
+            
+            # Create new UserAnswer
+            if survey.duplicate_entry:
+                user_answer = UserAnswer.objects.create(
+                    survey=survey,
+                    user=self.request.user,
+                    direction=None,
+                    **device_info
+                )
+            else:
+                defaults = {'direction': None}
+                defaults.update(device_info)
+                user_answer, created = UserAnswer.objects.get_or_create(
+                    survey=survey,
+                    user=self.request.user,
+                    defaults=defaults
+                )
+            
+            self.request.session[f'survey_{survey.id}_user_answer_id'] = user_answer.id
+            return user_answer
+        else:
+            # For anonymous users
+            session_key = self.request.session.session_key
+            if not session_key:
+                self.request.session.create()
+                session_key = self.request.session.session_key
+            
+            user_answer_id = self.request.session.get(f'survey_{survey.id}_user_answer_id')
+            if user_answer_id:
+                try:
+                    return UserAnswer.objects.get(id=user_answer_id)
+                except UserAnswer.DoesNotExist:
+                    pass
+            
+            user_answer = UserAnswer.objects.create(
+                survey=survey,
+                user=None,
+                direction=None,
+                **device_info
+            )
+            self.request.session[f'survey_{survey.id}_user_answer_id'] = user_answer.id
+            return user_answer
     
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
@@ -344,13 +408,23 @@ class CreateSurveyFormView(ContextTitleMixin, SurveyFormView):
         
         # Final submission (no sections or last section)
         try:
-            form.save()
+            # For multi-section surveys, answers are already saved via _save_current_section_answers
+            # Only call form.save() for non-section surveys
+            if not current_section:
+                form.save()
+            
             # Delete draft after successful submission
             DraftService.delete_draft(
                 survey=survey,
                 user=self.request.user if self.request.user.is_authenticated else None,
                 session_key=self.request.session.session_key if not self.request.user.is_authenticated else None
             )
+            
+            # Clear session user_answer_id
+            session_key = f'survey_{survey.id}_user_answer_id'
+            if session_key in self.request.session:
+                del self.request.session[session_key]
+            
             messages.success(self.request, _("Survey submitted successfully"))
             return redirect(self.get_success_url())
         except Exception as e:
@@ -363,16 +437,53 @@ class CreateSurveyFormView(ContextTitleMixin, SurveyFormView):
         This ensures answers are saved even when navigating between sections with branching.
         """
         from .models import Answer, UserAnswer
+        from .utils import capture_device_info
         
         survey = self.get_object()
         
+        # Capture device info for security
+        device_info = capture_device_info(self.request)
+        
         # Get or create UserAnswer for this survey session
         if self.request.user.is_authenticated:
-            user_answer, created = UserAnswer.objects.get_or_create(
-                survey=survey,
-                user=self.request.user,
-                defaults={'direction': None}
-            )
+            # Check if we have a user_answer_id in session (for duplicate_entry surveys)
+            user_answer_id = self.request.session.get(f'survey_{survey.id}_user_answer_id')
+            if user_answer_id:
+                try:
+                    user_answer = UserAnswer.objects.get(id=user_answer_id, user=self.request.user)
+                    created = False
+                except UserAnswer.DoesNotExist:
+                    # Session had invalid ID, create new one
+                    user_answer = UserAnswer.objects.create(
+                        survey=survey,
+                        user=self.request.user,
+                        direction=None,
+                        **device_info
+                    )
+                    created = True
+                    self.request.session[f'survey_{survey.id}_user_answer_id'] = user_answer.id
+            else:
+                # No session ID, try to get existing or create new
+                if survey.duplicate_entry:
+                    # For duplicate entry surveys, always create new
+                    user_answer = UserAnswer.objects.create(
+                        survey=survey,
+                        user=self.request.user,
+                        direction=None,
+                        **device_info
+                    )
+                    created = True
+                    self.request.session[f'survey_{survey.id}_user_answer_id'] = user_answer.id
+                else:
+                    # For non-duplicate surveys, get_or_create is safe
+                    defaults = {'direction': None}
+                    defaults.update(device_info)
+                    user_answer, created = UserAnswer.objects.get_or_create(
+                        survey=survey,
+                        user=self.request.user,
+                        defaults=defaults
+                    )
+                    self.request.session[f'survey_{survey.id}_user_answer_id'] = user_answer.id
         else:
             # For anonymous users, use session key
             session_key = self.request.session.session_key
@@ -389,14 +500,16 @@ class CreateSurveyFormView(ContextTitleMixin, SurveyFormView):
                     user_answer = UserAnswer.objects.create(
                         survey=survey,
                         user=None,
-                        direction=None
+                        direction=None,
+                        **device_info
                     )
                     self.request.session[f'survey_{survey.id}_user_answer_id'] = user_answer.id
             else:
                 user_answer = UserAnswer.objects.create(
                     survey=survey,
                     user=None,
-                    direction=None
+                    direction=None,
+                    **device_info
                 )
                 self.request.session[f'survey_{survey.id}_user_answer_id'] = user_answer.id
         
@@ -409,11 +522,25 @@ class CreateSurveyFormView(ContextTitleMixin, SurveyFormView):
             if field_name in form.cleaned_data:
                 value = form.cleaned_data[field_name]
                 
+                # Prepare defaults based on question type
+                if question.type_field == TYPE_FIELD.file:
+                    # For file uploads, save to file_value field
+                    defaults = {
+                        'value': '',  # Empty string for file fields
+                        'file_value': value
+                    }
+                elif isinstance(value, list):
+                    # For multi-select, join values
+                    defaults = {'value': ",".join(value)}
+                else:
+                    # For other types, save directly
+                    defaults = {'value': value}
+                
                 # Update or create answer
                 Answer.objects.update_or_create(
                     question=question,
                     user_answer=user_answer,
-                    defaults={'value': value if not isinstance(value, list) else ",".join(value)}
+                    defaults=defaults
                 )
         
         return user_answer

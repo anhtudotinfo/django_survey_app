@@ -16,6 +16,7 @@ urlpatterns = [
     path('question/delete/<int:pk>/', admin_views.AdminDeleteQuestionView.as_view(), name='admin_delete_question'),
     path('question/ordering/', admin_views.AdminChangeOrderQuestionView.as_view(), name='admin_change_order_question'),
     path('download/survey/<str:slug>/', admin_views.DownloadResponseSurveyView.as_view(), name='admin_download_survey'),
+    path('download/filtered/<str:slug>/', admin_views.DownloadFilteredResponseSurveyView.as_view(), name='admin_download_filtered_survey'),
     path('summary/survey/<str:slug>/', admin_views.SummaryResponseSurveyView.as_view(), name='admin_summary_survey'),
     path('directions/', DirectionsListView.as_view(), name='directions'),
     path('directions/add/', DirectionAddView.as_view(), name='add-direction'),

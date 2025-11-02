@@ -1,0 +1,132 @@
+================================================================================
+QUICK REFERENCE - Enhanced Filters
+================================================================================
+
+URL: /dashboard/summary/survey/<survey-slug>/
+
+NEW FEATURES:
+1. Date Range Filter (From Date → To Date)
+2. Question Filter (Select specific questions)
+3. Download with all filters applied
+
+================================================================================
+FILTERS AVAILABLE:
+================================================================================
+
+📅 DATE RANGE (Highest Priority)
+   - From Date: [____] To Date: [____] [Clear]
+   - Format: YYYY-MM-DD
+   - Overrides Year/Month if set
+
+📚 COURSE/DIRECTION
+   - Dropdown: All Courses | Course 1 | Course 2...
+
+📆 YEAR & MONTH (Only if no Date Range)
+   - Year: All Years | 2024 | 2025...
+   - Month: All Months | January | February...
+
+❓ QUESTIONS (New!)
+   - ☐ Question 1
+   - ☐ Question 2
+   - ☐ Question 3...
+   - [Select All] [Deselect All]
+
+================================================================================
+ACTION BUTTONS:
+================================================================================
+
+1. [🔽 Apply Filters]       → Update charts with filters
+2. [⬇ Download Filtered]    → Download CSV with filters
+3. [↻ Reset All Filters]    → Clear all and reload
+
+================================================================================
+USAGE EXAMPLES:
+================================================================================
+
+Example 1: Last 7 days
+  From: 2024-10-26, To: 2024-11-02
+  → Click "Apply Filters"
+
+Example 2: Specific questions only
+  Questions: ☑ Q1, ☑ Q5, ☑ Q10
+  → Click "Download Filtered"
+
+Example 3: Course in January 2024
+  Course: ABC
+  Year: 2024, Month: January
+  → Click "Apply Filters"
+
+================================================================================
+CSV DOWNLOAD:
+================================================================================
+
+Filename: survey-slug_from-DATE_to-DATE.csv
+
+Content:
+  Filters: From: 2024-01-01, To: 2024-03-31, Course: ABC
+  
+  User,Direction,Submitted Time,Question 1,Question 2,...
+  john,Course ABC,2024-01-15 10:30:00,Answer 1,Answer 2,...
+
+================================================================================
+FILTER PRIORITY:
+================================================================================
+
+1. Date Range (highest)
+   ↓
+2. Year & Month (if no date range)
+   ↓
+3. Direction/Course
+   ↓
+4. Questions (empty = all)
+
+================================================================================
+KEYBOARD SHORTCUTS:
+================================================================================
+
+None - Use mouse/touch for all interactions
+
+================================================================================
+TROUBLESHOOTING:
+================================================================================
+
+Charts not updating?
+  → Check filters in URL
+  → Clear browser cache
+  → Verify data exists for filters
+
+Download not working?
+  → Check browser downloads
+  → Verify filters are valid
+  → Check file permissions
+
+Questions not showing?
+  → Verify survey has questions
+  → Scroll down in question list
+
+================================================================================
+FILES MODIFIED:
+================================================================================
+
+Backend:
+  - djf_surveys/summary.py
+  - djf_surveys/admins/views.py
+  - djf_surveys/admins/urls.py
+
+Frontend:
+  - djf_surveys/templates/djf_surveys/admins/summary.html
+
+================================================================================
+TESTING:
+================================================================================
+
+1. Run: python3 test_enhanced_filters.py
+2. Open: http://127.0.0.1:8000/dashboard/summary/survey/<slug>/
+3. Test each filter individually
+4. Test combined filters
+5. Test download
+6. Test reset
+
+================================================================================
+STATUS: ✅ READY FOR USE
+================================================================================

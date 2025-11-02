@@ -219,23 +219,38 @@ class CreateSurveyForm(BaseSurveyForm):
     # Direction field removed - not needed anymore
     pass
 
-    def __init__(self, survey, user, current_section=None, *args, **kwargs):
+    def __init__(self, survey, user, current_section=None, user_answer=None, *args, **kwargs):
         self.survey = survey
         self.user = user
+        self.user_answer = user_answer  # Accept existing UserAnswer from view
         super().__init__(survey=survey, user=user, current_section=current_section, *args, **kwargs)
 
     @transaction.atomic
     def save(self):
         cleaned_data = super().clean()
 
-        # Save UserAnswer and UserAnswer2 (without direction)
-        user_answer = UserAnswer.objects.create(
-            survey=self.survey, user=self.user,
-            direction=None  # No longer require direction
-        )
+        # Use existing UserAnswer or create new one
+        if self.user_answer:
+            user_answer = self.user_answer
+            # For multi-section surveys, answers are already saved via update_or_create
+            # Don't delete them!
+            should_delete_answers = False
+        else:
+            # Fallback: create new if not provided (shouldn't happen normally)
+            user_answer = UserAnswer.objects.create(
+                survey=self.survey, user=self.user,
+                direction=None
+            )
+            should_delete_answers = True
+        
+        # Only delete existing answers for non-section surveys (to prevent duplicates on resubmit)
+        if should_delete_answers:
+            Answer.objects.filter(user_answer=user_answer).delete()
+        
+        # Create UserAnswer2 for ratings (always create new for each submission)
         user_answer2 = UserAnswer2.objects.create(
             survey=self.survey, user=self.user,
-            direction=None  # No longer require direction
+            direction=None
         )
 
         # Save general questions

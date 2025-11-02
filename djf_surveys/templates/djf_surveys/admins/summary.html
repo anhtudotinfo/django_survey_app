@@ -2,7 +2,7 @@
 {% load static i18n %}
 
 {% block extra_css %}
-    {{ chart_js_src|safe }}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <link rel="stylesheet" href="{% static 'djf_surveys/te-starter/css/tw-elements.min.css' %}">
     <link rel="stylesheet" href="{% static 'djf_surveys/css/rating.css' %}"/>
 {% endblock extra_css%}
@@ -37,15 +37,41 @@
             </div>
         </section>
 
-        <form method="GET" action="" class="space-y-6 mb-2">
+        <form method="GET" action="" class="space-y-6 mb-2" id="filterForm">
+            <!-- Date Range Filters (New) -->
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h3 class="text-lg font-semibold mb-3 text-blue-800">{% trans "Date Range Filter" %}</h3>
+                <div class="flex flex-col md:flex-row md:items-end md:space-x-4 space-y-4 md:space-y-0">
+                    <div class="flex flex-col flex-1">
+                        <label for="from_date" class="mb-2 text-gray-700 font-semibold">{% trans "From Date" %}:</label>
+                        <input type="date" name="from_date" id="from_date" value="{{ from_date }}" 
+                               class="block w-full bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 p-2">
+                    </div>
+                    
+                    <div class="flex flex-col flex-1">
+                        <label for="to_date" class="mb-2 text-gray-700 font-semibold">{% trans "To Date" %}:</label>
+                        <input type="date" name="to_date" id="to_date" value="{{ to_date }}" 
+                               class="block w-full bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 p-2">
+                    </div>
+                    
+                    <div class="flex flex-col">
+                        <button type="button" onclick="clearDateRange()" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-md">
+                            {% trans "Clear" %}
+                        </button>
+                    </div>
+                </div>
+                <p class="text-xs text-gray-600 mt-2">{% trans "Note: Date range filter takes priority over Year/Month filters" %}</p>
+            </div>
+            
+            <!-- Original Filters -->
             <div class="flex flex-col md:flex-row md:items-end md:space-x-4 space-y-4 md:space-y-0">
                 <!-- Select Course -->
                 <div class="flex flex-col flex-1">
-                    <label for="direction" class="mb-2 text-gray-700 font-semibold">Select Course:</label>
+                    <label for="direction" class="mb-2 text-gray-700 font-semibold">{% trans "Select Course" %}:</label>
                     <select name="direction" id="direction" class="block w-full bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 p-2">
-                        <option value="">{% trans "Courses" %}</option>
+                        <option value="">{% trans "All Courses" %}</option>
                         {% for direction in directions %}
-                            <option value="{{ direction.id }}" {% if direction.id == selected_direction.id %}selected{% endif %}>
+                            <option value="{{ direction.id }}" {% if selected_direction and direction.id == selected_direction.id %}selected{% endif %}>
                                 {{ direction.name }}
                             </option>
                         {% endfor %}
@@ -54,9 +80,9 @@
 
                 <!-- Select Year -->
                 <div class="flex flex-col flex-1">
-                    <label for="year" class="mb-2 text-gray-700 font-semibold">Select Year:</label>
+                    <label for="year" class="mb-2 text-gray-700 font-semibold">{% trans "Select Year" %}:</label>
                     <select id="year" name="year" class="block w-full bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 p-2">
-                        <option value="">Years</option>
+                        <option value="">{% trans "All Years" %}</option>
                         {% for year in years %}
                             <option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>
                                 {{ year }}
@@ -67,9 +93,9 @@
 
                 <!-- Select Month -->
                 <div class="flex flex-col flex-1">
-                    <label for="month" class="mb-2 text-gray-700 font-semibold">Select Month:</label>
+                    <label for="month" class="mb-2 text-gray-700 font-semibold">{% trans "Select Month" %}:</label>
                     <select id="month" name="month" class="block w-full bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 p-2">
-                        <option value="">Months</option>
+                        <option value="">{% trans "All Months" %}</option>
                         {% for month in months %}
                             <option value="{{ month.value }}" {% if month.value == selected_month %}selected{% endif %}>
                                 {{ month.name}}
@@ -77,11 +103,45 @@
                         {% endfor %}
                     </select>
                 </div>
-
-                <!-- Submit Button -->
-                <div class="flex flex-col">
-                    <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full mt-6 md:mt-0" type="submit">{% trans "Results" %}</button>
+            </div>
+            
+            <!-- Question Filter (New) -->
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h3 class="text-lg font-semibold mb-3 text-green-800">{% trans "Question Filter" %}</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-60 overflow-y-auto">
+                    {% for question in all_questions %}
+                        <label class="flex items-start space-x-2 p-2 hover:bg-green-100 rounded cursor-pointer">
+                            <input type="checkbox" name="questions" value="{{ question.id }}" 
+                                   {% if question.id in selected_questions %}checked{% endif %}
+                                   class="mt-1 focus:ring-green-500 h-4 w-4 text-green-600 border-gray-300 rounded">
+                            <span class="text-sm text-gray-700">{{ question.label }}</span>
+                        </label>
+                    {% endfor %}
                 </div>
+                <div class="mt-3 flex space-x-2">
+                    <button type="button" onclick="selectAllQuestions()" class="text-sm bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded">
+                        {% trans "Select All" %}
+                    </button>
+                    <button type="button" onclick="deselectAllQuestions()" class="text-sm bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded">
+                        {% trans "Deselect All" %}
+                    </button>
+                </div>
+                <p class="text-xs text-gray-600 mt-2">{% trans "Leave empty to show all questions" %}</p>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="flex flex-col md:flex-row md:items-center md:space-x-4 space-y-4 md:space-y-0">
+                <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-full" type="submit">
+                    <i class="bi bi-filter"></i> {% trans "Apply Filters" %}
+                </button>
+                
+                <button type="button" onclick="downloadFiltered()" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-full">
+                    <i class="bi bi-download"></i> {% trans "Download Filtered Data" %}
+                </button>
+                
+                <button type="button" onclick="resetFilters()" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded-full">
+                    <i class="bi bi-arrow-counterclockwise"></i> {% trans "Reset All Filters" %}
+                </button>
             </div>
         </form>
 
@@ -97,4 +157,52 @@
     </div>
 
 {% endblock content%}
+
+{% block extra_js %}
+<script>
+// Clear date range inputs
+function clearDateRange() {
+    document.getElementById('from_date').value = '';
+    document.getElementById('to_date').value = '';
+}
+
+// Select all questions
+function selectAllQuestions() {
+    const checkboxes = document.querySelectorAll('input[name="questions"]');
+    checkboxes.forEach(cb => cb.checked = true);
+}
+
+// Deselect all questions
+function deselectAllQuestions() {
+    const checkboxes = document.querySelectorAll('input[name="questions"]');
+    checkboxes.forEach(cb => cb.checked = false);
+}
+
+// Reset all filters
+function resetFilters() {
+    // Clear form
+    document.getElementById('filterForm').reset();
+    // Redirect to page without query params
+    window.location.href = window.location.pathname;
+}
+
+// Download filtered data
+function downloadFiltered() {
+    const form = document.getElementById('filterForm');
+    const formData = new FormData(form);
+    
+    // Build query string
+    const params = new URLSearchParams();
+    for (const [key, value] of formData) {
+        if (value) {
+            params.append(key, value);
+        }
+    }
+    
+    // Change URL to download endpoint
+    const downloadUrl = "{% url 'djf_surveys:admin_download_filtered_survey' object.slug %}" + '?' + params.toString();
+    window.location.href = downloadUrl;
+}
+</script>
+{% endblock %}
 

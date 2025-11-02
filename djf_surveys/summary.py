@@ -235,19 +235,44 @@ class ChartBarRating(ChartBar):
 
 class SummaryResponse:
 
-    def __init__(self, survey: Survey, selected_year: int, selected_month: int, selected_direction: Direction):
+    def __init__(self, survey: Survey, selected_year: int = None, selected_month: int = None, 
+                 selected_direction: Direction = None, from_date: str = None, to_date: str = None,
+                 selected_questions: list = None):
         self.survey = survey
         self.selected_year = selected_year
         self.selected_month = selected_month
         self.selected_direction = selected_direction
+        self.from_date = from_date
+        self.to_date = to_date
+        self.selected_questions = selected_questions or []
 
     def get_filtered_queryset(self, queryset):
-        # Agar selected_month yoki selected_direction tanlanmagan bo'lsa, ularga filtr qo'llanmaydi.
-        if self.selected_year is not None:
-            queryset = queryset.filter(created_at__year=self.selected_year)
+        # Apply date range filters (takes priority over year/month)
+        if self.from_date:
+            from datetime import datetime
+            try:
+                from_datetime = datetime.strptime(self.from_date, '%Y-%m-%d')
+                queryset = queryset.filter(created_at__gte=from_datetime)
+            except ValueError:
+                pass
+        
+        if self.to_date:
+            from datetime import datetime, timedelta
+            try:
+                to_datetime = datetime.strptime(self.to_date, '%Y-%m-%d')
+                # Include the entire end date
+                to_datetime = to_datetime + timedelta(days=1)
+                queryset = queryset.filter(created_at__lt=to_datetime)
+            except ValueError:
+                pass
+        
+        # If no date range specified, use year/month filters
+        if not self.from_date and not self.to_date:
+            if self.selected_year is not None:
+                queryset = queryset.filter(created_at__year=self.selected_year)
 
-        if self.selected_month is not None:
-            queryset = queryset.filter(created_at__month=self.selected_month)
+            if self.selected_month is not None:
+                queryset = queryset.filter(created_at__month=self.selected_month)
 
         if self.selected_direction is not None:
             queryset = queryset.filter(user_answer__direction=self.selected_direction)
@@ -574,7 +599,13 @@ class SummaryResponse:
         """
         html_str = []
 
-        for question in self.survey.questions.all():
+        questions = self.survey.questions.all()
+        
+        # Filter by selected questions if specified
+        if self.selected_questions:
+            questions = questions.filter(id__in=self.selected_questions)
+
+        for question in questions:
             if question.type_field == TYPE_FIELD.radio or question.type_field == TYPE_FIELD.select:
                 html_str.append(self._process_radio_type(question))
             elif question.type_field == TYPE_FIELD.multi_select:

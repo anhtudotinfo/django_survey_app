@@ -2,6 +2,7 @@ from django.utils.safestring import mark_safe
 from django.core.paginator import Paginator
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
+import re
 
 from djf_surveys import models
 
@@ -114,3 +115,139 @@ def get_type_field():
             'icon': "bi bi-cloud-upload"
         }
     ]
+
+
+# Device and browser detection utilities
+
+def get_client_ip(request):
+    """
+    Extract client IP address from request.
+    Handles both direct connections and proxy/load balancer scenarios.
+    Priority order:
+    1. HTTP_X_FORWARDED_FOR (from proxy/load balancer)
+    2. HTTP_X_REAL_IP (from nginx)
+    3. REMOTE_ADDR (direct connection)
+    """
+    # Try X-Forwarded-For first (from proxy/CDN)
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        # Get first IP in chain (client IP)
+        ip = x_forwarded_for.split(',')[0].strip()
+        return ip
+    
+    # Try X-Real-IP (from nginx)
+    x_real_ip = request.META.get('HTTP_X_REAL_IP')
+    if x_real_ip:
+        return x_real_ip.strip()
+    
+    # Fallback to REMOTE_ADDR
+    return request.META.get('REMOTE_ADDR', '')
+
+
+def parse_user_agent(user_agent_string):
+    """
+    Parse user agent string to extract browser, OS, and device type.
+    Returns dict with keys: browser, os, device
+    """
+    if not user_agent_string:
+        return {
+            'browser': 'Unknown',
+            'os': 'Unknown',
+            'device': 'Unknown'
+        }
+    
+    ua = user_agent_string.lower()
+    
+    # Detect browser
+    browser = 'Unknown'
+    if 'edg/' in ua or 'edge/' in ua:
+        browser = 'Microsoft Edge'
+        version_match = re.search(r'edg[e]?/(\d+)', ua)
+        if version_match:
+            browser += f' {version_match.group(1)}'
+    elif 'chrome/' in ua and 'safari/' in ua:
+        browser = 'Chrome'
+        version_match = re.search(r'chrome/(\d+)', ua)
+        if version_match:
+            browser += f' {version_match.group(1)}'
+    elif 'firefox/' in ua:
+        browser = 'Firefox'
+        version_match = re.search(r'firefox/(\d+)', ua)
+        if version_match:
+            browser += f' {version_match.group(1)}'
+    elif 'safari/' in ua and 'chrome/' not in ua:
+        browser = 'Safari'
+        version_match = re.search(r'version/(\d+)', ua)
+        if version_match:
+            browser += f' {version_match.group(1)}'
+    elif 'opera' in ua or 'opr/' in ua:
+        browser = 'Opera'
+        version_match = re.search(r'opr/(\d+)', ua)
+        if version_match:
+            browser += f' {version_match.group(1)}'
+    
+    # Detect OS
+    os_name = 'Unknown'
+    if 'windows nt 10' in ua:
+        os_name = 'Windows 10/11'
+    elif 'windows nt 6.3' in ua:
+        os_name = 'Windows 8.1'
+    elif 'windows nt 6.2' in ua:
+        os_name = 'Windows 8'
+    elif 'windows nt 6.1' in ua:
+        os_name = 'Windows 7'
+    elif 'windows' in ua:
+        os_name = 'Windows'
+    elif 'mac os x' in ua or 'macos' in ua:
+        os_name = 'macOS'
+        version_match = re.search(r'mac os x (\d+[._]\d+)', ua)
+        if version_match:
+            version = version_match.group(1).replace('_', '.')
+            os_name += f' {version}'
+    elif 'android' in ua:
+        os_name = 'Android'
+        version_match = re.search(r'android (\d+)', ua)
+        if version_match:
+            os_name += f' {version_match.group(1)}'
+    elif 'iphone' in ua or 'ipad' in ua:
+        os_name = 'iOS'
+        version_match = re.search(r'os (\d+[._]\d+)', ua)
+        if version_match:
+            version = version_match.group(1).replace('_', '.')
+            os_name += f' {version}'
+    elif 'linux' in ua:
+        os_name = 'Linux'
+    elif 'ubuntu' in ua:
+        os_name = 'Ubuntu'
+    
+    # Detect device type
+    device = 'Desktop'
+    if 'mobile' in ua:
+        device = 'Mobile'
+    elif 'tablet' in ua or 'ipad' in ua:
+        device = 'Tablet'
+    elif 'android' in ua and 'mobile' not in ua:
+        device = 'Tablet'
+    
+    return {
+        'browser': browser,
+        'os': os_name,
+        'device': device
+    }
+
+
+def capture_device_info(request):
+    """
+    Capture complete device information from request.
+    Returns dict with ip_address, user_agent, browser, os, device
+    """
+    user_agent_string = request.META.get('HTTP_USER_AGENT', '')
+    parsed = parse_user_agent(user_agent_string)
+    
+    return {
+        'ip_address': get_client_ip(request),
+        'user_agent': user_agent_string,
+        'browser': parsed['browser'],
+        'os': parsed['os'],
+        'device': parsed['device']
+    }

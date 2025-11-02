@@ -111,7 +111,10 @@ class AdminAnswer2(admin.ModelAdmin):
 
 
 class AdminUserAnswer(admin.ModelAdmin):
-    list_display = ('survey', 'user', 'created_at', 'updated_at')
+    list_display = ('survey', 'user', 'ip_address', 'browser', 'device', 'created_at', 'updated_at')
+    list_filter = ('survey', 'browser', 'device', 'created_at')
+    search_fields = ('user__username', 'ip_address', 'browser')
+    readonly_fields = ('ip_address', 'user_agent', 'browser', 'os', 'device')
 
 
 class AdminUserAnswer2(admin.ModelAdmin):
