@@ -1,0 +1,158 @@
+{% extends get_master_template %}
+{% load i18n static %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'djf_surveys/te-starter/css/tw-elements.min.css' %}">
+    <style>
+        .hero-gradient {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        .stats-card {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        }
+        .feature-icon {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <!-- Hero Section -->
+    <div class="hero-gradient text-white py-16 mb-8" {% if site_config.homepage_banner %}style="background-image: linear-gradient(rgba(102, 126, 234, 0.9), rgba(118, 75, 162, 0.9)), url('{{ site_config.homepage_banner.url }}'); background-size: cover; background-position: center;"{% endif %}>
+        <div class="container px-5 mx-auto">
+            <div class="text-center">
+                <h1 class="text-4xl md:text-5xl font-bold mb-4">
+                    {{ site_config.homepage_title|default:"Survey Management System" }}
+                </h1>
+                <p class="text-xl md:text-2xl text-purple-100 mb-8">
+                    {{ site_config.homepage_subtitle|default:"Create, manage, and analyze surveys with ease" }}
+                </p>
+                
+                {% if site_config.homepage_video_url %}
+                <div class="max-w-3xl mx-auto mb-6">
+                    <div class="relative" style="padding-bottom: 56.25%;">
+                        <iframe class="absolute top-0 left-0 w-full h-full rounded-lg shadow-lg" 
+                                src="{{ site_config.homepage_video_url }}" 
+                                frameborder="0" 
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                allowfullscreen>
+                        </iframe>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if user.is_authenticated and user.is_staff %}
+                <a href="{% url 'djf_surveys:admin_create_survey' %}" 
+                   class="inline-flex items-center gap-2 px-8 py-4 bg-white text-purple-700 font-semibold rounded-full hover:bg-purple-50 transition shadow-lg">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                    {% trans "Create New Survey" %}
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="container px-5 py-5 mx-auto">
+        <!-- Stats Section (for staff) -->
+        {% if user.is_authenticated and user.is_staff %}
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <div class="stats-card rounded-lg p-6 text-center">
+                <div class="text-3xl font-bold text-purple-700">{{ object_list.count }}</div>
+                <div class="text-gray-600 mt-2">{% trans "Total Surveys" %}</div>
+            </div>
+            <div class="stats-card rounded-lg p-6 text-center">
+                <div class="text-3xl font-bold text-blue-700">
+                    <svg class="w-8 h-8 inline-block" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"></path>
+                    </svg>
+                </div>
+                <div class="text-gray-600 mt-2">{% trans "Active Users" %}</div>
+            </div>
+            <div class="stats-card rounded-lg p-6 text-center">
+                <div class="text-3xl font-bold text-green-700">
+                    <svg class="w-8 h-8 inline-block" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 0l-2 2a1 1 0 101.414 1.414L8 10.414l1.293 1.293a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                    </svg>
+                </div>
+                <div class="text-gray-600 mt-2">{% trans "Responses" %}</div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Features Section (for non-authenticated users) -->
+        {% if not user.is_authenticated %}
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+            <div class="text-center p-6">
+                <div class="feature-icon w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-bold mb-2">{% trans "QR Code Access" %}</h3>
+                <p class="text-gray-600">{% trans "Scan QR codes to access surveys instantly" %}</p>
+            </div>
+            <div class="text-center p-6">
+                <div class="feature-icon w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-bold mb-2">{% trans "Easy to Use" %}</h3>
+                <p class="text-gray-600">{% trans "Simple and intuitive survey interface" %}</p>
+            </div>
+            <div class="text-center p-6">
+                <div class="feature-icon w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-bold mb-2">{% trans "Secure & Private" %}</h3>
+                <p class="text-gray-600">{% trans "Your responses are protected and confidential" %}</p>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Search Section -->
+        <div class="mb-8">
+            {% include 'djf_surveys/components/search_form.html' %}
+        </div>
+
+        <!-- Surveys Grid -->
+        {% if object_list %}
+            <div class="mb-6">
+                <h2 class="text-2xl font-bold text-gray-900 mb-4">
+                    {% trans "Available Surveys" %}
+                </h2>
+            </div>
+            <div class="grid xs:grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {% for survey in page_obj %}
+                    <div class="card-hover">
+                        {% include 'djf_surveys/components/card_list_survey.html' %}
+                    </div>
+                {% endfor %}
+            </div>
+            <div class="py-10">
+                {% include 'djf_surveys/components/pagination.html' %}
+            </div>
+        {% else %}
+            {% include 'djf_surveys/components/empty_state.html' %}
+        {% endif %}
+    </div>
+
+    {% include 'djf_surveys/components/modal_delete.html' %}
+
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'djf_surveys/te-starter/js/tw-elements.umd.min.js' %}"></script>
+    {% include 'djf_surveys/components/modal_delete_js.html' %}
+{% endblock %}

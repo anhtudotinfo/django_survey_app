@@ -311,16 +311,16 @@
             <div class="text-center max-w-4xl mx-auto">
                 <div data-aos="fade-down" data-aos-duration="800">
                     <span class="inline-block px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full text-sm font-semibold mb-6">
-                        🏛️ Công An Nhân Dân Phục Vụ Nhân Dân
+                        ✨ {% trans "Welcome to our platform" %}
                     </span>
                 </div>
                 
                 <h1 class="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight" data-aos="fade-up" data-aos-duration="1000">
-                    {{ site_config.homepage_title|default:"Hệ Thống Thu Thập Thông Tin" }}
+                    {{ site_config.homepage_title|default:"Professional Survey Management" }}
                 </h1>
                 
                 <p class="text-xl md:text-2xl text-white/90 mb-10 leading-relaxed" data-aos="fade-up" data-aos-duration="1000" data-aos-delay="200">
-                    {{ site_config.homepage_subtitle|default:"Công An Phường An Khê - Quận Thanh Khê - Thành Phố Đà Nẵng" }}
+                    {{ site_config.homepage_subtitle|default:"Create, distribute, and analyze surveys with powerful analytics and beautiful reports" }}
                 </p>
                 
                 {% if site_config.homepage_video_url %}
@@ -342,14 +342,14 @@
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                         </svg>
-                        Tạo Biểu Mẫu Mới
+                        {% trans "Create New Survey" %}
                     </a>
                     {% else %}
                     <a href="#surveys" class="btn-primary">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
                         </svg>
-                        Xem Biểu Mẫu
+                        {% trans "Browse Surveys" %}
                     </a>
                     {% endif %}
                     
@@ -357,7 +357,7 @@
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                         </svg>
-                        Tìm Hiểu Thêm
+                        {% trans "Learn More" %}
                     </a>
                 </div>
             </div>
@@ -387,8 +387,8 @@
                         </svg>
                     </div>
                 </div>
-                <div class="text-gray-600 font-semibold">Tổng Biểu Mẫu</div>
-                <div class="text-sm text-gray-500 mt-1">Đang hoạt động và đã đóng</div>
+                <div class="text-gray-600 font-semibold">{% trans "Total Surveys" %}</div>
+                <div class="text-sm text-gray-500 mt-1">{% trans "Active and closed" %}</div>
             </div>
             
             <div class="stats-card">
@@ -402,8 +402,8 @@
                         </svg>
                     </div>
                 </div>
-                <div class="text-gray-600 font-semibold">Người Dân Tham Gia</div>
-                <div class="text-sm text-gray-500 mt-1">Trong tháng này</div>
+                <div class="text-gray-600 font-semibold">{% trans "Active Participants" %}</div>
+                <div class="text-sm text-gray-500 mt-1">{% trans "This month" %}</div>
             </div>
             
             <div class="stats-card">
@@ -417,56 +417,84 @@
                         </svg>
                     </div>
                 </div>
-                <div class="text-gray-600 font-semibold">Tỷ Lệ Hoàn Thành</div>
-                <div class="text-sm text-green-600 mt-1">↑ 5% so với tháng trước</div>
+                <div class="text-gray-600 font-semibold">{% trans "Completion Rate" %}</div>
+                <div class="text-sm text-green-600 mt-1">↑ 5% {% trans "vs last month" %}</div>
             </div>
         </div>
         {% endif %}
 
-        <!-- Feature Highlight Section -->
+        <!-- Features Section -->
         <div id="features" class="mb-20">
-            <div class="max-w-4xl mx-auto">
-                <div class="feature-card bg-gradient-to-br from-white to-purple-50/30 p-12" data-aos="zoom-in">
-                    <div class="flex flex-col md:flex-row items-center gap-8">
-                        <div class="feature-icon w-32 h-32 flex-shrink-0">
-                            <svg class="w-20 h-20 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path>
-                            </svg>
-                        </div>
-                        <div class="flex-1 text-center md:text-left">
-                            <h2 class="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-                                Quét Mã QR - Khai Báo Nhanh
-                            </h2>
-                            <p class="text-xl text-gray-600 leading-relaxed mb-6">
-                                Người dân chỉ cần quét mã QR bằng điện thoại để khai báo thông tin nhanh chóng, thuận tiện. 
-                                Không cần cài đặt ứng dụng, dễ sử dụng cho mọi lứa tuổi.
-                            </p>
-                            <div class="flex flex-wrap gap-4 justify-center md:justify-start">
-                                <div class="flex items-center gap-2 text-gray-700">
-                                    <svg class="w-6 h-6 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-                                    </svg>
-                                    <span>Nhanh chóng</span>
-                                </div>
-                                <div class="flex items-center gap-2 text-gray-700">
-                                    <svg class="w-6 h-6 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-                                    </svg>
-                                    <span>Thuận tiện</span>
-                                </div>
-                                <div class="flex items-center gap-2 text-gray-700">
-                                    <svg class="w-6 h-6 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-                                    </svg>
-                                    <span>Bảo mật cao</span>
-                                </div>
-                            </div>
-                        </div>
+            <div class="text-center mb-12" data-aos="fade-up">
+                <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+                    {% trans "Powerful Features" %}
+                </h2>
+                <p class="text-xl text-gray-600 max-w-2xl mx-auto">
+                    {% trans "Everything you need to create, manage, and analyze surveys effectively" %}
+                </p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="feature-card" data-aos="fade-up" data-aos-delay="100">
+                    <div class="feature-icon">
+                        <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path>
+                        </svg>
                     </div>
+                    <h3 class="text-2xl font-bold mb-3 text-gray-900">{% trans "QR Code Access" %}</h3>
+                    <p class="text-gray-600 leading-relaxed">{% trans "Generate QR codes for instant survey access. Perfect for events and offline distribution." %}</p>
+                </div>
+                
+                <div class="feature-card" data-aos="fade-up" data-aos-delay="200">
+                    <div class="feature-icon">
+                        <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-3 text-gray-900">{% trans "Real-time Analytics" %}</h3>
+                    <p class="text-gray-600 leading-relaxed">{% trans "Beautiful charts and graphs that update in real-time as responses come in." %}</p>
+                </div>
+                
+                <div class="feature-card" data-aos="fade-up" data-aos-delay="300">
+                    <div class="feature-icon">
+                        <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-3 text-gray-900">{% trans "Secure & Private" %}</h3>
+                    <p class="text-gray-600 leading-relaxed">{% trans "Bank-level encryption protects all responses. GDPR compliant and fully secure." %}</p>
+                </div>
+                
+                <div class="feature-card" data-aos="fade-up" data-aos-delay="100">
+                    <div class="feature-icon">
+                        <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-3 text-gray-900">{% trans "Lightning Fast" %}</h3>
+                    <p class="text-gray-600 leading-relaxed">{% trans "Optimized performance ensures surveys load instantly on any device." %}</p>
+                </div>
+                
+                <div class="feature-card" data-aos="fade-up" data-aos-delay="200">
+                    <div class="feature-icon">
+                        <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-3 text-gray-900">{% trans "Mobile Optimized" %}</h3>
+                    <p class="text-gray-600 leading-relaxed">{% trans "Perfect experience on smartphones, tablets, and desktops. Responsive design." %}</p>
+                </div>
+                
+                <div class="feature-card" data-aos="fade-up" data-aos-delay="300">
+                    <div class="feature-icon">
+                        <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-3 text-gray-900">{% trans "Export Data" %}</h3>
+                    <p class="text-gray-600 leading-relaxed">{% trans "Download responses in CSV format with advanced filtering options." %}</p>
                 </div>
             </div>
-        </div>
-
         </div>
 
         <!-- Search Section -->
@@ -493,9 +521,9 @@
             <div class="mb-8" data-aos="fade-up">
                 <div class="flex items-center justify-between">
                     <h2 class="text-3xl font-bold text-gray-900">
-                        Biểu Mẫu Khảo Sát
+                        {% trans "Available Surveys" %}
                     </h2>
-                    <span class="text-gray-500">{{ page_obj.paginator.count }} biểu mẫu</span>
+                    <span class="text-gray-500">{{ page_obj.paginator.count }} {% trans "surveys found" %}</span>
                 </div>
             </div>
             

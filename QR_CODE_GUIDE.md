@@ -1,252 +1,270 @@
-# QR Code Feature Guide
+# Hướng Dẫn Tạo và Sử Dụng Mã QR
 
-## Overview
-The survey system now includes QR code generation functionality, allowing users to easily share and access surveys by scanning QR codes.
+## ✅ Đã Cập Nhật
 
-## Features
+Trang chủ giờ đã hiển thị:
+- **Domain + URL đầy đủ** của hệ thống
+- Hộp highlight với địa chỉ truy cập
+- Hướng dẫn sao chép và tạo QR code
 
-### 1. QR Code Generation
-- Each survey automatically has a unique QR code linked to its URL
-- QR codes are dynamically generated using the `qrcode` library
-- High-quality PNG format with error correction
+## 📱 Xem Ngay
 
-### 2. Access Methods
-
-#### Via Survey Card
-On the homepage, each survey card displays action buttons including:
-- **Purple button**: Create new response
-- **Indigo button (NEW)**: View QR code
-- **Blue button** (staff only): Edit survey
-- **Green button** (staff only): View summary
-- **Red button** (staff only): Delete survey
-
-#### Via Direct URL
-Access QR code page directly:
-```
-/surveys/qr/<survey-slug>/
+```bash
+python3 manage.py runserver
+# Truy cập: http://127.0.0.1:8000/
 ```
 
-### 3. QR Code Page Features
+Bạn sẽ thấy địa chỉ hiển thị ở phần "Quét Mã QR - Khai Báo Nhanh"
 
-The QR code page (`qr_code.html`) includes:
+## 🎯 Cách Tạo Mã QR
 
-#### Display
-- Large, scannable QR code image
-- Survey name and description
-- Full survey URL
+### Cách 1: Tạo QR Cho Trang Chủ (Recommend)
 
-#### Actions
-1. **Copy URL**: Click the copy button to copy survey link to clipboard
-2. **Download QR Code**: Download QR code as PNG file
-3. **View Survey**: Go directly to survey details
-4. **Back to List**: Return to survey list
+1. **Lấy URL từ trang chủ**
+   - URL hiển thị: `http://yourdomain.com` hoặc `http://127.0.0.1:8000`
+   
+2. **Tạo QR Code trực tuyến** (MIỄN PHÍ)
+   - Vào: https://qr-code-generator.com
+   - Dán URL vào ô "Website URL"
+   - Click "Create QR Code"
+   - Download PNG hoặc PDF
 
-#### Instructions
-- Step-by-step guide for scanning QR codes
-- Mobile-friendly interface
-- Print-ready QR code
+3. **Hoặc dùng công cụ khác:**
+   - https://www.qrcode-monkey.com (Có logo custom)
+   - https://www.the-qrcode-generator.com
+   - https://goqr.me
 
-## Technical Implementation
+### Cách 2: Tạo QR Cho Từng Biểu Mẫu
 
-### Model Methods (Survey)
+1. **Lấy URL biểu mẫu cụ thể**
+   - Ví dụ: `http://yourdomain.com/create/khao-sat-an-ninh/`
+   
+2. **Tạo QR như trên**
+
+3. **Lợi ích:**
+   - Người dân quét trực tiếp vào biểu mẫu
+   - Không cần chọn trong danh sách
+
+### Cách 3: Tạo QR Tự Động Trong Admin
+
+Nếu bạn muốn tự động, có thể:
+
+1. **Install qrcode package:**
+```bash
+pip install qrcode[pil]
+```
+
+2. **Tạo view để generate QR:**
+```python
+# views.py
+import qrcode
+from io import BytesIO
+from django.http import HttpResponse
+
+def generate_qr(request, slug):
+    survey_url = request.build_absolute_uri(
+        reverse('djf_surveys:create_survey', args=[slug])
+    )
+    
+    # Create QR code
+    qr = qrcode.QRCode(version=1, box_size=10, border=5)
+    qr.add_data(survey_url)
+    qr.make(fit=True)
+    
+    img = qr.make_image(fill_color="black", back_color="white")
+    
+    # Return as image
+    buffer = BytesIO()
+    img.save(buffer, format='PNG')
+    buffer.seek(0)
+    
+    return HttpResponse(buffer, content_type='image/png')
+```
+
+## 📋 Kích Thước In Đề Xuất
+
+### 1. Poster A4 (Dán tại UBND, Công An)
+- **Kích thước QR:** 10cm x 10cm
+- **Độ phân giải:** 300 DPI
+- **Format:** PNG hoặc PDF
+
+**Template:**
+```
+┌─────────────────────────────┐
+│   [Logo Công An]            │
+│                             │
+│  KHAI BÁO THÔNG TIN         │
+│  PHƯỜNG AN KHÊ              │
+│                             │
+│    [QR CODE 10x10cm]        │
+│                             │
+│  Quét mã QR để khai báo     │
+│  http://your-url.com        │
+└─────────────────────────────┘
+```
+
+### 2. Tờ Rơi A5
+- **Kích thước QR:** 5cm x 5cm
+- **In 2 mặt:** Mặt 1: QR, Mặt 2: Hướng dẫn
+
+### 3. Sticker Nhỏ
+- **Kích thước:** 3cm x 3cm
+- **Dán:** Tại tổ dân phố, khu vực công cộng
+
+## 🎨 Thiết Kế Poster Chuyên Nghiệp
+
+### Template Word/PowerPoint:
+
+```
+╔═══════════════════════════════════════╗
+║                                       ║
+║    🏛️ CÔNG AN PHƯỜNG AN KHÊ          ║
+║       Quận Thanh Khê - TP. Đà Nẵng   ║
+║                                       ║
+║  ═══════════════════════════════════  ║
+║                                       ║
+║     KHAI BÁO THÔNG TIN TRỰC TUYẾN    ║
+║                                       ║
+║            [QR CODE HERE]             ║
+║              10cm x 10cm              ║
+║                                       ║
+║  ─────────────────────────────────── ║
+║                                       ║
+║  ✓ Quét mã QR bằng điện thoại        ║
+║  ✓ Khai báo thông tin nhanh chóng    ║
+║  ✓ Không cần cài đặt ứng dụng        ║
+║                                       ║
+║  🔗 http://your-domain.com           ║
+║                                       ║
+║  📞 Hotline: 0236.xxx.xxxx           ║
+║                                       ║
+╚═══════════════════════════════════════╝
+```
+
+## 🖨️ In Ấn
+
+### Khuyến Nghị:
+- **Giấy:** 200gsm (dày, bền)
+- **In màu:** Full color
+- **Cán màng:** Bóng (chống nước)
+- **Số lượng:**
+  - Poster A4: 50-100 tờ
+  - Tờ rơi A5: 500-1000 tờ
+  - Sticker: 200-500 cái
+
+### Chi Phí Ước Tính:
+- Poster A4: ~5,000đ/tờ
+- Tờ rơi A5: ~2,000đ/tờ
+- Sticker 3x3cm: ~1,000đ/cái
+
+## 📍 Địa Điểm Đặt QR Code
+
+### Ưu Tiên:
+1. ✅ Trụ sở Công An Phường
+2. ✅ UBND Phường
+3. ✅ Bảng tin tại các khu dân cư
+4. ✅ Trạm Y tế
+5. ✅ Trường học trong phường
+6. ✅ Chợ, siêu thị
+
+### Phụ:
+- Quán cà phê, nhà hàng
+- Cửa hàng tiện lợi
+- Điểm sinh hoạt cộng đồng
+
+## 📱 Hướng Dẫn Người Dân
+
+### Cách Quét QR Code:
+
+**Với iPhone (iOS 11+):**
+1. Mở Camera
+2. Chĩa vào mã QR
+3. Nhấn vào thông báo xuất hiện
+
+**Với Android:**
+1. Mở Camera hoặc Google Lens
+2. Chĩa vào mã QR
+3. Nhấn vào link xuất hiện
+
+**Nếu không quét được:**
+- Gõ trực tiếp: `http://your-url.com`
+
+## 🎯 Tips Tăng Hiệu Quả
+
+### 1. Tuyên Truyền
+- Thông báo qua loa phát thanh
+- Đăng lên Group Facebook phường
+- Gửi Zalo nhóm tổ dân phố
+- Họp dân phố giới thiệu
+
+### 2. Động Viên
+- Tặng quà nhỏ cho người tham gia đầu tiên
+- Tổ chức rút thăm may mắn
+- Công khai kết quả trên bảng tin
+
+### 3. Hỗ Trợ
+- Bố trí cán bộ tại địa điểm có QR
+- Hỗ trợ người cao tuổi
+- Giải đáp thắc mắc
+
+## 📊 Theo Dõi Hiệu Quả
+
+### Metrics:
+- Số lượt scan QR (Google Analytics)
+- Số người hoàn thành biểu mẫu
+- Tỷ lệ hoàn thành
+- Thời gian trung bình
+
+### Dashboard Admin:
+```
+http://your-domain.com/dashboard/summary/survey/slug/
+```
+
+## 🔧 Nâng Cao
+
+### Tạo QR Code Động (Advanced)
+
+Nếu muốn theo dõi ai scan QR:
 
 ```python
-def get_absolute_url(self):
-    """Get the full URL for this survey."""
-    return reverse('djf_surveys:survey_detail', kwargs={'slug': self.slug})
+# Add tracking parameter
+url = f"http://yourdomain.com?utm_source=qr&utm_campaign=ankhe"
 
-def generate_qr_code(self, request=None):
-    """Generate QR code for survey URL. Returns base64 encoded image."""
-    # Generates QR code with proper error correction
-    # Returns data URI for direct embedding in HTML
-
-def get_qr_download_url(self):
-    """Get URL to download QR code."""
-    return reverse('djf_surveys:survey_qr_download', kwargs={'slug': self.slug})
+# Generate QR with this URL
+# Analytics sẽ track được
 ```
 
-### Views
+### Tích Hợp Google Analytics
 
-#### `survey_qr_code(request, slug)`
-- Displays QR code page with embedded image
-- Provides full survey URL
-- Shows download and navigation options
-
-#### `survey_qr_download(request, slug)`
-- Generates downloadable PNG file
-- Filename format: `survey_<slug>_qr.png`
-- Optimized for printing (300 DPI equivalent)
-
-### URLs
-```python
-path('qr/<str:slug>/', views.survey_qr_code, name='survey_qr_code'),
-path('qr/<str:slug>/download/', views.survey_qr_download, name='survey_qr_download'),
+Trong template, thêm:
+```html
+<!-- Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=GA_MEASUREMENT_ID"></script>
 ```
 
-## Usage Examples
+## 📞 Hỗ Trợ Kỹ Thuật
 
-### 1. Share Survey via QR Code
-1. Navigate to survey list
-2. Click the QR code button (indigo) on any survey card
-3. Share the displayed QR code via:
-   - Screenshot
-   - Download PNG file
-   - Print physical copy
-   - Display on screen for scanning
+### Nếu gặp vấn đề:
 
-### 2. Download QR Code for Printing
-1. Open QR code page
-2. Click "Download QR Code" button
-3. Open downloaded PNG file
-4. Print on paper or materials
-5. Distribute to target audience
+1. **QR không quét được:**
+   - Check URL có chính xác không
+   - Regenerate QR code
+   - Tăng kích thước QR
 
-### 3. Embed in Presentations
-1. Download QR code PNG
-2. Insert image into PowerPoint/Google Slides
-3. Present during meetings/conferences
-4. Attendees can scan to access survey instantly
+2. **Link không mở:**
+   - Check server có chạy không
+   - Check domain có hoạt động không
+   - Check firewall settings
 
-## QR Code Specifications
+3. **Người dân không biết cách:**
+   - In hướng dẫn chi tiết
+   - Video hướng dẫn ngắn
+   - Hỗ trợ trực tiếp
 
-### Technical Details
-- **Format**: PNG
-- **Error Correction**: Level L (7% recovery)
-- **Box Size**: 10 pixels per module
-- **Border**: 4 modules (quiet zone)
-- **Colors**: Black on white background
+---
 
-### Size Recommendations
-- **Digital Display**: Original size (typically 290x290px)
-- **Print (A4 paper)**: 5-10 cm width
-- **Poster/Banner**: 15-30 cm width
-- **Business Card**: 2-3 cm width
+**Đơn Vị:** Công An Phường An Khê  
+**Ngày:** 2025-11-02  
+**Phiên Bản:** 1.0  
 
-### Scanning Distance
-- Small (2cm): 10-20cm away
-- Medium (5cm): 25-50cm away
-- Large (10cm): 50-100cm away
-- Poster (20cm+): 100-200cm away
-
-## Best Practices
-
-### Design
-1. Ensure adequate white space around QR code
-2. Maintain high contrast (black on white recommended)
-3. Test scanning before mass distribution
-4. Include text URL as fallback
-
-### Distribution
-1. **Physical**: Print on quality paper, avoid glossy surfaces
-2. **Digital**: Use PNG format, avoid compression
-3. **Display**: Ensure good lighting, no glare
-4. **Mobile**: Test on various devices before deployment
-
-### Accessibility
-1. Always provide alternative text URL
-2. Include instructions for first-time users
-3. Test with multiple QR code reader apps
-4. Consider audience's technical proficiency
-
-## Troubleshooting
-
-### QR Code Won't Scan
-- **Issue**: Poor lighting or screen glare
-  - **Solution**: Adjust angle, increase brightness
-  
-- **Issue**: Code too small
-  - **Solution**: Download and zoom in, or print larger
-  
-- **Issue**: Damaged or distorted image
-  - **Solution**: Re-download QR code
-  
-- **Issue**: Camera focus problems
-  - **Solution**: Hold steady, move closer/farther
-
-### Download Issues
-- **Issue**: PNG file not downloading
-  - **Solution**: Check browser settings, allow downloads
-  
-- **Issue**: Incorrect filename
-  - **Solution**: Rename after download using format: `survey_<name>_qr.png`
-
-## Homepage Redesign
-
-### New Features
-
-#### Hero Section
-- Gradient background (purple theme)
-- Clear call-to-action for staff users
-- Responsive typography
-
-#### Stats Dashboard (Staff Only)
-- Total surveys count
-- Active users indicator
-- Response statistics
-- Color-coded cards with gradients
-
-#### Feature Highlights (Public Users)
-- QR Code Access feature
-- Easy to Use interface
-- Security & Privacy assurance
-- Icon-based visual design
-
-#### Survey Grid
-- 3-column layout on desktop
-- Card hover effects with elevation
-- Improved spacing and typography
-- Better visual hierarchy
-
-### Styling Enhancements
-- Custom gradient backgrounds
-- Smooth transitions and animations
-- Consistent color palette
-- Modern card designs
-- Responsive layout for all devices
-
-## Security Considerations
-
-### QR Code Safety
-- QR codes link directly to survey pages
-- No sensitive data encoded in QR code
-- Same permission checks as direct URL access
-- Secure HTTPS URLs (in production)
-
-### Privacy
-- Survey responses remain private according to settings
-- QR codes are publicly accessible but don't expose data
-- Staff-only features require authentication
-
-## Future Enhancements
-
-### Potential Features
-1. Custom QR code colors/branding
-2. Logo embedding in QR center
-3. Batch QR code generation
-4. Analytics: scan tracking
-5. Dynamic QR codes with expiration
-6. Short URL integration
-
-## Support
-
-For issues or questions:
-1. Check this documentation
-2. Review Django admin logs
-3. Test in development environment
-4. Contact system administrator
-
-## Dependencies
-
-- `qrcode[pil]==8.2`: QR code generation library
-- `Pillow==10.2.0`: Image processing (already installed)
-- Django URL routing
-- Base64 encoding for inline images
-
-## Version History
-
-- **v1.0** (2025-01-02): Initial QR code implementation
-  - Basic QR generation
-  - Download functionality
-  - QR code page template
-  - Homepage redesign
-  - Survey card integration
+✅ **Sẵn sàng triển khai QR Code!**
