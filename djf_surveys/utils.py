@@ -107,5 +107,10 @@ def get_type_field():
             'id': models.TYPE_FIELD.rating,
             'label': _("Rating"),
             'icon': "bi bi-star"
+        },
+        {
+            'id': models.TYPE_FIELD.file,
+            'label': _("File Upload"),
+            'icon': "bi bi-cloud-upload"
         }
     ]

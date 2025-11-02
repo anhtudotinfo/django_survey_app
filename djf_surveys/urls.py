@@ -13,5 +13,7 @@ urlpatterns = [
     path('share/<str:slug>/', views.share_link, name='share_link'),
     path('success/<str:slug>/', views.SuccessPageSurveyView.as_view(), name='success'),
     path('download/file/<int:answer_id>/', views.download_survey_file, name='download_file'),
+    path('qr/<str:slug>/', views.survey_qr_code, name='survey_qr_code'),
+    path('qr/<str:slug>/download/', views.survey_qr_download, name='survey_qr_download'),
     path(SURVEYS_ADMIN_BASE_PATH, include('djf_surveys.admins.urls')),
 ]

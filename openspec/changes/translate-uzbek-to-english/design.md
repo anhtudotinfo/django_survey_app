@@ -116,7 +116,7 @@ The Django Survey Application currently has Uzbek text embedded throughout the c
 | kiritish maydonining turi | field type | Input field type |
 | tahrirlanadigan | editable | Can edit |
 | o'chirib tashlasa bo'ladigan | deletable | Can delete |
-| anonim yuborish | allow anonymous | Anonymous access |
+| Anonymous yuborish | allow anonymous | Anonymous access |
 | foydalanuvchi | user | User |
 | javob | answer | Response/answer |
 | savol | question | Question |

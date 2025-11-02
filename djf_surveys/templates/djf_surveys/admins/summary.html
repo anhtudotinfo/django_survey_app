@@ -13,7 +13,7 @@
         <section>
             <div class="py-6 lg:items-end justify-between flex">
                 <h2 class="max-w-xl text-2xl font-bold sm:text-3xl">
-                    {% trans "Xulosa" %} - {{ object.name }}
+                    {% trans "Summary" %} - {{ object.name }}
                 </h2>
 
                 <div class="flex -space-x-4 hover:space-x-1 float-right">
@@ -31,9 +31,9 @@
 
         <form method="GET" action="" class="space-y-6 mb-2">
             <div class="flex flex-col md:flex-row md:items-end md:space-x-4 space-y-4 md:space-y-0">
-                <!-- Kursni tanlang -->
+                <!-- Select Course -->
                 <div class="flex flex-col flex-1">
-                    <label for="direction" class="mb-2 text-gray-700 font-semibold">Kursni tanlang:</label>
+                    <label for="direction" class="mb-2 text-gray-700 font-semibold">Select Course:</label>
                     <select name="direction" id="direction" class="block w-full bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 p-2">
                         <option value="">{% trans "Courses" %}</option>
                         {% for direction in directions %}
@@ -44,11 +44,11 @@
                     </select>
                 </div>
 
-                <!-- Yilni tanlang -->
+                <!-- Select Year -->
                 <div class="flex flex-col flex-1">
-                    <label for="year" class="mb-2 text-gray-700 font-semibold">Yilni tanlang:</label>
+                    <label for="year" class="mb-2 text-gray-700 font-semibold">Select Year:</label>
                     <select id="year" name="year" class="block w-full bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 p-2">
-                        <option value="">Yillar</option>
+                        <option value="">Years</option>
                         {% for year in years %}
                             <option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>
                                 {{ year }}
@@ -57,11 +57,11 @@
                     </select>
                 </div>
 
-                <!-- Oyni tanlang -->
+                <!-- Select Month -->
                 <div class="flex flex-col flex-1">
-                    <label for="month" class="mb-2 text-gray-700 font-semibold">Oyni tanlang:</label>
+                    <label for="month" class="mb-2 text-gray-700 font-semibold">Select Month:</label>
                     <select id="month" name="month" class="block w-full bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 p-2">
-                        <option value="">Oylar</option>
+                        <option value="">Months</option>
                         {% for month in months %}
                             <option value="{{ month.value }}" {% if month.value == selected_month %}selected{% endif %}>
                                 {{ month.name}}

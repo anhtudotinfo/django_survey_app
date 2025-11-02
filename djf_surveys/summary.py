@@ -474,7 +474,7 @@ class SummaryResponse:
             categories.append(full_name)
             data_series.append(round(avg_rating, 1))
 
-        # Ranglar ro'yxatini tayyorlash
+        # Prepare color list
         colors = ['#4CAF50'] * len(categories)  # Yashil rang, kerakli rangni o'zgartiring
 
         # JSON formatga o'tkazish
@@ -583,7 +583,7 @@ class SummaryResponse:
                 html_str.append(self._process_rating_type(question))
 
         if not html_str:
-            input_types = ', '.join(str(x[1]) for x in TYPE_FIELD if
+            input_types = ', '.join(str(x[1]) for x in models.TYPE_FIELD_CHOICES if
                                     x[0] in (
                                         models.TYPE_FIELD.radio,
                                         models.TYPE_FIELD.select,

@@ -1,0 +1,171 @@
+{% extends get_master_template %}
+{% load i18n static %}
+
+{% block extra_css %}
+    <style>
+        .qr-container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .qr-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            padding: 2rem;
+        }
+        .qr-image {
+            max-width: 100%;
+            height: auto;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 1rem;
+            background: white;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 500;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+        .btn-secondary {
+            background: #6b7280;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: #4b5563;
+        }
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #059669;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="container px-5 py-8">
+    <div class="qr-container">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">
+                {% trans "QR Code for Survey" %}
+            </h1>
+            <h2 class="text-xl text-gray-600">
+                {{ survey.name }}
+            </h2>
+            <p class="text-sm text-gray-500 mt-2">
+                {% trans "Scan this QR code to access the survey" %}
+            </p>
+        </div>
+
+        <!-- QR Code Card -->
+        <div class="qr-card">
+            <div class="text-center mb-6">
+                <img src="{{ qr_code }}" alt="QR Code for {{ survey.name }}" class="qr-image mx-auto">
+            </div>
+
+            <!-- Survey URL -->
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    {% trans "Survey URL:" %}
+                </label>
+                <div class="flex">
+                    <input 
+                        type="text" 
+                        value="{{ survey_url }}" 
+                        id="survey-url"
+                        readonly 
+                        class="flex-1 px-4 py-2 border border-gray-300 rounded-l-lg bg-gray-50 text-sm"
+                    >
+                    <button 
+                        onclick="copySurveyUrl()" 
+                        class="px-4 py-2 bg-blue-500 text-white rounded-r-lg hover:bg-blue-600 transition"
+                    >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                        </svg>
+                    </button>
+                </div>
+                <p id="copy-feedback" class="text-sm text-green-600 mt-1 hidden">
+                    ✓ {% trans "URL copied to clipboard!" %}
+                </p>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="action-buttons">
+                <a href="{% url 'djf_surveys:survey_qr_download' survey.slug %}" class="btn btn-success" download>
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                    </svg>
+                    {% trans "Download QR Code" %}
+                </a>
+                <a href="{% url 'djf_surveys:detail' survey.slug %}" class="btn btn-primary">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                    </svg>
+                    {% trans "View Survey" %}
+                </a>
+                <a href="{% url 'djf_surveys:index' %}" class="btn btn-secondary">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    </svg>
+                    {% trans "Back to List" %}
+                </a>
+            </div>
+        </div>
+
+        <!-- Instructions -->
+        <div class="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h3 class="font-semibold text-blue-900 mb-2">
+                {% trans "How to use:" %}
+            </h3>
+            <ul class="text-sm text-blue-800 space-y-1">
+                <li>• {% trans "Open your phone's camera or QR code scanner app" %}</li>
+                <li>• {% trans "Point it at the QR code above" %}</li>
+                <li>• {% trans "Tap the notification to open the survey link" %}</li>
+                <li>• {% trans "You can also download and print this QR code" %}</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function copySurveyUrl() {
+    const urlInput = document.getElementById('survey-url');
+    const feedback = document.getElementById('copy-feedback');
+    
+    // Select and copy
+    urlInput.select();
+    urlInput.setSelectionRange(0, 99999); // For mobile
+    document.execCommand('copy');
+    
+    // Show feedback
+    feedback.classList.remove('hidden');
+    setTimeout(() => {
+        feedback.classList.add('hidden');
+    }, 2000);
+}
+</script>
+{% endblock %}

@@ -108,14 +108,14 @@ python test_guest_survey.py
 1. Đăng nhập Django admin
 2. Vào **Surveys (So'rovnomalar)**
 3. Chọn hoặc tạo khảo sát mới
-4. ✅ Đánh dấu **"anonim yuborish" (can_anonymous_user)**
+4. ✅ Đánh dấu **"Anonymous yuborish" (can_anonymous_user)**
 5. Lưu lại
 
 **Via Admin Panel:**
 1. Log in to Django admin
 2. Go to **Surveys (So'rovnomalar)**  
 3. Select or create a survey
-4. ✅ Check **"anonim yuborish" (can_anonymous_user)**
+4. ✅ Check **"Anonymous yuborish" (can_anonymous_user)**
 5. Save
 
 ### Bước 2: Khách truy cập khảo sát / Guest Accesses Survey

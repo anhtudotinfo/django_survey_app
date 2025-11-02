@@ -171,10 +171,20 @@ class DraftService:
         Returns:
             Dict with field names as keys
         """
+        from datetime import datetime
+        
         form_data = {}
         if draft.data:
             for question_id, value in draft.data.items():
                 field_name = f'field_survey_{question_id}'
+                # Convert ISO date strings back to date objects if needed
+                if isinstance(value, str) and len(value) == 10 and value.count('-') == 2:
+                    try:
+                        # Try to parse as date (YYYY-MM-DD format)
+                        from datetime import date
+                        value = date.fromisoformat(value)
+                    except (ValueError, AttributeError):
+                        pass  # Keep as string if parsing fails
                 form_data[field_name] = value
         
         return form_data
@@ -190,6 +200,8 @@ class DraftService:
         Returns:
             Dict mapping question_id to answer value
         """
+        from datetime import date, datetime
+        
         answers = {}
         for field_name, value in form_data.items():
             if field_name.startswith('field_survey_'):
@@ -198,6 +210,9 @@ class DraftService:
                     question_id = int(field_name.replace('field_survey_', ''))
                     # Handle file fields - don't store in draft (need special handling)
                     if not hasattr(value, 'read'):  # Not a file object
+                        # Convert date/datetime to string for JSON serialization
+                        if isinstance(value, (date, datetime)):
+                            value = value.isoformat()
                         answers[question_id] = value
                 except (ValueError, AttributeError):
                     continue

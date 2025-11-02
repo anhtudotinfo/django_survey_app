@@ -25,7 +25,7 @@ from djf_surveys.draft_service import DraftService
 
 class SurveyListView(ContextTitleMixin, UserPassesTestMixin, ListView):
     model = Survey
-    title_page = "So‘rovnomalar ro‘yxati"
+    title_page = "List of questionnaires"
     paginate_by = app_settings.SURVEY_PAGINATION_NUMBER['survey_list']
     paginator_class = NewPaginator
 
@@ -101,13 +101,13 @@ class SurveyFormView(FormMixin, DetailView):
             try:
                 # Save ma'lumotlar
                 form.save()
-                messages.success(request, "Javobingiz saqlandi!")
+                messages.success(request, "Your response has been saved!")
                 return self.form_valid(form)
             except Exception as e:
-                messages.error(request, f"Saqlashda xatolik yuz berdi: {str(e)}")
+                messages.error(request, f"An error occurred while saving: {str(e)}")
                 return self.form_invalid(form)
         else:
-            messages.error(request, "Formani to‘ldirishda xatolik")
+            messages.error(request, "Error filling out the form")
             return self.form_invalid(form)
 
     def get_form(self, form_class=None):
@@ -118,18 +118,18 @@ class SurveyFormView(FormMixin, DetailView):
 class CreateSurveyFormView(ContextTitleMixin, SurveyFormView):
     model = Survey
     form_class = CreateSurveyForm
-    title_page = _("So'rovnoma to'ldirish")
+    title_page = _("Fill Survey")
 
     def dispatch(self, request, *args, **kwargs):
         survey = self.get_object()
         if not request.user.is_authenticated and not survey.can_anonymous_user:
-            messages.warning(request, gettext("Kechirasiz, so'rovnomani to'ldirish uchun tizimga kirgan bo'lishingiz kerak."))
+            messages.warning(request, gettext("Sorry, you need to be logged in to fill out the survey."))
             return redirect("djf_surveys:index")
 
         # handle if user have answer survey
         if request.user.is_authenticated and not survey.duplicate_entry and \
                 UserAnswer.objects.filter(survey=survey, user=request.user).exists():
-            messages.warning(request, gettext("Siz ushbu so'rovnomani topshirdingiz."))
+            messages.warning(request, gettext("You have already submitted this survey."))
             return redirect("djf_surveys:index")
         return super().dispatch(request, *args, **kwargs)
     
@@ -258,12 +258,40 @@ class CreateSurveyFormView(ContextTitleMixin, SurveyFormView):
         return redirect(self.request.path + f'?section={current_section.id}')
     
     def navigate_previous(self):
-        """Navigate to previous section."""
+        """Navigate to previous section using navigation history."""
+        survey = self.get_object()
         current_section = self.get_current_section()
+        
         if not current_section:
             return redirect(self.request.path)
         
-        navigator = SectionNavigator(self.get_object())
+        # Try to get from URL parameter first (simple approach)
+        prev_section_id = self.request.GET.get('prev')
+        if prev_section_id:
+            try:
+                previous_section = Section.objects.get(id=prev_section_id, survey=survey)
+                return redirect(self.request.path + f'?section={previous_section.id}')
+            except (Section.DoesNotExist, ValueError):
+                pass
+        
+        # Fallback: Get from session history
+        history_key = f'survey_{survey.id}_history'
+        history = self.request.session.get(history_key, [])
+        
+        if history:
+            # Pop last section from history
+            previous_section_id = history.pop()
+            self.request.session[history_key] = history
+            self.request.session.modified = True
+            
+            try:
+                previous_section = Section.objects.get(id=previous_section_id, survey=survey)
+                return redirect(self.request.path + f'?section={previous_section.id}')
+            except Section.DoesNotExist:
+                pass
+        
+        # Last fallback: Sequential navigation
+        navigator = SectionNavigator(survey)
         previous_section = navigator.get_previous_section(current_section)
         
         if previous_section:
@@ -286,7 +314,11 @@ class CreateSurveyFormView(ContextTitleMixin, SurveyFormView):
         if current_section:
             navigator = SectionNavigator(survey)
             
-            # Extract and save answers to draft first
+            # Save answers for current section's questions to database
+            # (Not just draft - we need actual Answer records for statistics)
+            self._save_current_section_answers(form, current_section)
+            
+            # Also save to draft for progress tracking
             answers = DraftService.extract_answers_from_form(form.cleaned_data)
             draft = DraftService.save_draft(
                 survey=survey,
@@ -300,8 +332,15 @@ class CreateSurveyFormView(ContextTitleMixin, SurveyFormView):
             next_section = navigator.get_next_section(current_section, draft.data)
             
             if next_section and action == 'next':
-                # Navigate to next section
-                return redirect(self.request.path + f'?section={next_section.id}')
+                # Save navigation history in session
+                history_key = f'survey_{survey.id}_history'
+                history = self.request.session.get(history_key, [])
+                history.append(current_section.id)
+                self.request.session[history_key] = history
+                self.request.session.modified = True
+                
+                # Navigate to next section with prev parameter
+                return redirect(self.request.path + f'?section={next_section.id}&prev={current_section.id}')
         
         # Final submission (no sections or last section)
         try:
@@ -318,6 +357,67 @@ class CreateSurveyFormView(ContextTitleMixin, SurveyFormView):
             messages.error(self.request, f"Error: {str(e)}")
             return self.form_invalid(form)
 
+    def _save_current_section_answers(self, form, current_section):
+        """
+        Save answers for current section's questions immediately.
+        This ensures answers are saved even when navigating between sections with branching.
+        """
+        from .models import Answer, UserAnswer
+        
+        survey = self.get_object()
+        
+        # Get or create UserAnswer for this survey session
+        if self.request.user.is_authenticated:
+            user_answer, created = UserAnswer.objects.get_or_create(
+                survey=survey,
+                user=self.request.user,
+                defaults={'direction': None}
+            )
+        else:
+            # For anonymous users, use session key
+            session_key = self.request.session.session_key
+            if not session_key:
+                self.request.session.create()
+                session_key = self.request.session.session_key
+            
+            # Store in session to track across sections
+            user_answer_id = self.request.session.get(f'survey_{survey.id}_user_answer_id')
+            if user_answer_id:
+                try:
+                    user_answer = UserAnswer.objects.get(id=user_answer_id)
+                except UserAnswer.DoesNotExist:
+                    user_answer = UserAnswer.objects.create(
+                        survey=survey,
+                        user=None,
+                        direction=None
+                    )
+                    self.request.session[f'survey_{survey.id}_user_answer_id'] = user_answer.id
+            else:
+                user_answer = UserAnswer.objects.create(
+                    survey=survey,
+                    user=None,
+                    direction=None
+                )
+                self.request.session[f'survey_{survey.id}_user_answer_id'] = user_answer.id
+        
+        # Save answers for questions in current section
+        questions = form.questions.filter(section=current_section)
+        
+        for question in questions:
+            field_name = f'field_survey_{question.id}'
+            
+            if field_name in form.cleaned_data:
+                value = form.cleaned_data[field_name]
+                
+                # Update or create answer
+                Answer.objects.update_or_create(
+                    question=question,
+                    user_answer=user_answer,
+                    defaults={'value': value if not isinstance(value, list) else ",".join(value)}
+                )
+        
+        return user_answer
+    
     def get_title_page(self):
         return self.get_object().name
 
@@ -331,19 +431,22 @@ class CreateSurveyFormView(ContextTitleMixin, SurveyFormView):
 @method_decorator(login_required, name='dispatch')
 class EditSurveyFormView(ContextTitleMixin, SurveyFormView):
     form_class = EditSurveyForm
-    title_page = "So‘rovnomani tahrirlash"
+    title_page = "Edit Survey"
     model = UserAnswer
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['object'] = self.get_object().survey
+        user_answer = self.get_object()
+        context['object'] = user_answer.survey
+        # Fix: Override questions2 to use correct survey
+        context['questions2'] = Question2.objects.filter(survey=user_answer.survey)
         return context
 
     def dispatch(self, request, *args, **kwargs):
         # handle if user not same
         user_answer = self.get_object()
         if user_answer.user != request.user or not user_answer.survey.editable:
-            messages.warning(request, gettext("Siz bu soʻrovnomani tahrirlay olmaysiz. Sizda ruxsat yo‘q."))
+            messages.warning(request, gettext("You cannot edit this survey. You don't have permission."))
             return redirect("djf_surveys:index")
         return super().dispatch(request, *args, **kwargs)
 
@@ -368,27 +471,27 @@ class DeleteSurveyAnswerView(DetailView):
         # handle if user not same
         user_answer = self.get_object()
         if user_answer.user != request.user or not user_answer.survey.deletable:
-            messages.warning(request, gettext("Bu soʻrovnomani oʻchira olmaysiz. Sizda ruxsat yo‘q."))
+            messages.warning(request, gettext("You cannot delete this survey. You don't have permission."))
             return redirect("djf_surveys:index")
         return super().dispatch(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):
         user_answer = self.get_object()
         user_answer.delete()
-        messages.success(self.request, gettext("Javob muvaffaqiyatli oʻchirildi."))
+        messages.success(self.request, gettext("Response successfully deleted."))
         return redirect("djf_surveys:detail", slug=user_answer.survey.slug)
 
 
 class DetailSurveyView(ContextTitleMixin, DetailView):
     model = Survey
     template_name = "djf_surveys/answer_list.html"
-    title_page = _("So'rovnoma tafsilotlari")
+    title_page = _("Survey Details")
     paginate_by = app_settings.SURVEY_PAGINATION_NUMBER['answer_list']
 
     def dispatch(self, request, *args, **kwargs):
         survey = self.get_object()
         if not self.request.user.is_superuser and survey.private_response:
-            messages.warning(request, gettext("Siz bu sahifaga kira olmaysiz. Sizda ruxsat yo‘q."))
+            messages.warning(request, gettext("You cannot access this page. You don't have permission."))
             return redirect("djf_surveys:index")
         return super().dispatch(request, *args, **kwargs)
 
@@ -413,15 +516,32 @@ class DetailResultSurveyView(ContextTitleMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['object'] = self.get_object()
+        user_answer = self.get_object()
+        context['object'] = user_answer
         context['on_detail'] = True
+        
+        # Get all questions for the survey
+        all_questions = Question.objects.filter(survey=user_answer.survey).order_by('id')
+        
+        # Create a list of (question, answer) tuples
+        # If answer doesn't exist, use None
+        answers_dict = {answer.question.id: answer for answer in user_answer.answer_set.all()}
+        question_answer_pairs = []
+        for question in all_questions:
+            answer = answers_dict.get(question.id, None)
+            question_answer_pairs.append({
+                'question': question,
+                'answer': answer
+            })
+        
+        context['question_answer_pairs'] = question_answer_pairs
         return context
 
     def dispatch(self, request, *args, **kwargs):
         # handle if user not same
         user_answer = self.get_object()
         if user_answer.user != request.user:
-            messages.warning(request, gettext("Siz bu sahifaga kira olmaysiz. Sizda ruxsat yo‘q."))
+            messages.warning(request, gettext("You cannot access this page. You don't have permission."))
             return redirect("djf_surveys:index")
         return super().dispatch(request, *args, **kwargs)
 
@@ -486,4 +606,50 @@ def download_survey_file(request, answer_id):
     # Serve file
     response = FileResponse(open(file_path, 'rb'))
     response['Content-Disposition'] = f'attachment; filename="{os.path.basename(file_path)}"'
+    return response
+
+
+def survey_qr_code(request, slug):
+    """Display QR code for survey."""
+    from django.shortcuts import render
+    survey = get_object_or_404(Survey, slug=slug)
+    qr_code_data = survey.generate_qr_code(request)
+    
+    context = {
+        'survey': survey,
+        'qr_code': qr_code_data,
+        'survey_url': request.build_absolute_uri(survey.get_absolute_url()),
+    }
+    return render(request, 'djf_surveys/qr_code.html', context)
+
+
+def survey_qr_download(request, slug):
+    """Download QR code as PNG file."""
+    from django.http import HttpResponse
+    import qrcode
+    import io
+    
+    survey = get_object_or_404(Survey, slug=slug)
+    survey_url = request.build_absolute_uri(survey.get_absolute_url())
+    
+    # Generate QR code
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=10,
+        border=4,
+    )
+    qr.add_data(survey_url)
+    qr.make(fit=True)
+    
+    img = qr.make_image(fill_color="black", back_color="white")
+    
+    # Save to buffer
+    buffer = io.BytesIO()
+    img.save(buffer, format='PNG')
+    buffer.seek(0)
+    
+    # Return as downloadable file
+    response = HttpResponse(buffer.getvalue(), content_type='image/png')
+    response['Content-Disposition'] = f'attachment; filename="survey_{survey.slug}_qr.png"'
     return response

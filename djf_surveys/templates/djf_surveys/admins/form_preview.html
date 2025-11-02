@@ -72,7 +72,7 @@
     </div>
 
     <div class="max-w-screen-xl px-4 py-16 mx-auto sm:px-6 lg:px-8">
-        <div class="max-w-lg mx-auto">
+        <div class="max-w-4xl mx-auto">
             <div class="flex -space-x-4 hover:space-x-1 py-1 float-right">
                 <a href="{% url 'djf_surveys:admin_edit_survey' object.slug %}"
                    class="z-20 block p-4 text-blue-700 transition-all bg-blue-100 border-2 border-white rounded-full active:bg-blue-50 hover:scale-110 focus:outline-none focus:ring"
@@ -96,6 +96,9 @@
             <p class="max-w-md mx-auto mt-4 text-center text-gray-500">
                 {{ sub_title_page }}
             </p>
+            
+            <!-- Section Manager Component -->
+            {% include 'djf_surveys/components/section_manager.html' %}
 
             <form method="post" class="mx-auto mt-12" id="sortable">
                 {% csrf_token %}
@@ -151,7 +154,7 @@
         <div class="max-w-lg mx-auto">
             <!-- Existing content... -->
 
-            <h2 class="text-xl font-semibold mb-4">Baholanadigan professor-o‘qituvchilar ro‘yxati</h2>
+            <h2 class="text-xl font-semibold mb-4">Professor to be evaluated-List of teachers</h2>
             <div class="bg-white shadow overflow-hidden sm:rounded-md">
                 <ul class="divide-y divide-gray-200">
                     {% for user in eligible_users %}
@@ -163,7 +166,7 @@
                             </label>
                         </li>
                     {% empty %}
-                        <li class="px-6 py-4">Userlar topilmadi!</li>
+                        <li class="px-6 py-4">No users found!</li>
                     {% endfor %}
                 </ul>
             </div>
@@ -198,7 +201,7 @@
                             console.log(data.message);
                         },
                         error: function (data) {
-                            alert("{% trans 'Xatolik sodir bo‘ldi!' %}");
+                            alert("{% trans 'An error occurred!' %}");
                         }
                     });
                 }
@@ -226,7 +229,7 @@
                             console.log(data.message);
                         },
                         error: function (data) {
-                            alert("{% trans 'Xatolik sodir bo‘ldi!' %}");
+                            alert("{% trans 'An error occurred!' %}");
                         }
                     });
                 }
@@ -248,13 +251,13 @@
                     dataType: 'json',
                     success: function(response) {
                         if(response.status === 'success') {
-                            console.log(`User ${userId} baholanishi mumkin: ${response.can_be_rated}`);
+                            console.log(`User ${userId} can be rated: ${response.can_be_rated}`);
                         } else {
                             alert(response.message);
                         }
                     },
                     error: function(xhr, status, error) {
-                        alert("{% trans 'User holatini yangilashda xato sodir bo‘ldi.' %}");
+                        alert("{% trans 'Failed to update user status.' %}");
                         // Optionally, revert the checkbox state
                         location.reload();
                     }

@@ -32,7 +32,7 @@ The `Survey` model already includes the `can_anonymous_user` field:
 
 ```python
 can_anonymous_user = models.BooleanField(
-    _("anonim yuborish"), 
+    _("Anonymous yuborish"), 
     default=False,
     help_text=_("Agar belgi qo'yilsa, autentifikatsiyasiz foydalanuvchi yuboradi.")
 )
@@ -59,7 +59,7 @@ user = models.ForeignKey(
 1. Log in to the Django admin panel
 2. Navigate to **Surveys**
 3. Select or create a survey
-4. Check the **"anonim yuborish" (can_anonymous_user)** checkbox
+4. Check the **"Anonymous yuborish" (can_anonymous_user)** checkbox
 5. Save the survey
 
 The admin interface now shows:

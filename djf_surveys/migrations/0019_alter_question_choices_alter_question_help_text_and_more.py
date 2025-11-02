@@ -73,7 +73,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='survey',
             name='can_anonymous_user',
-            field=models.BooleanField(default=False, help_text='Agar belgi qo‘yilsa, autentifikatsiyasiz foydalanuvchi yuboradi.', verbose_name='anonim yuborish'),
+            field=models.BooleanField(default=False, help_text='Agar belgi qo‘yilsa, autentifikatsiyasiz foydalanuvchi yuboradi.', verbose_name='Anonymous yuborish'),
         ),
         migrations.AlterField(
             model_name='survey',
@@ -83,7 +83,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='survey',
             name='description',
-            field=models.TextField(default='', verbose_name='ta’rif'),
+            field=models.TextField(default='', verbose_name='Description'),
         ),
         migrations.AlterField(
             model_name='survey',

@@ -1,8 +1,8 @@
 from typing import List, Tuple, Optional
 from django import forms
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import transaction
-from django.core.validators import MaxLengthValidator, MinLengthValidator
+from django.core.validators import MaxLengthValidator, MinLengthValidator, RegexValidator
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext_lazy as _
 from accounts.models import Profile
@@ -13,6 +13,7 @@ from djf_surveys.models import (
 from djf_surveys.widgets import CheckboxSelectMultipleSurvey, RadioSelectSurvey, DateSurvey, RatingSurvey
 from djf_surveys.app_settings import DATE_INPUT_FORMAT, SURVEY_FIELD_VALIDATORS
 from djf_surveys.validators import RatingValidator, FileTypeValidator, FileSizeValidator
+import re
 
 
 def make_choices(question: Question) -> List[Tuple[str, str]]:
@@ -57,22 +58,67 @@ class BaseSurveyForm(forms.Form):
                 )
             elif question.type_field == TYPE_FIELD.select:
                 choices = make_choices(question)
-                empty_choice = [("", _("Tanlash"))]
+                empty_choice = [("", _("Select"))]
                 choices = empty_choice + choices
                 self.fields[field_name] = forms.ChoiceField(
                     choices=choices, label=question.label
                 )
             elif question.type_field == TYPE_FIELD.number:
-                self.fields[field_name] = forms.IntegerField(label=question.label)
+                validators = []
+                regex = question.get_effective_regex_pattern()
+                if regex:
+                    try:
+                        validators.append(RegexValidator(
+                            regex=regex,
+                            message=question.validation_message or _("Invalid number format")
+                        ))
+                    except re.error:
+                        pass
+                self.fields[field_name] = forms.IntegerField(
+                    label=question.label,
+                    validators=validators
+                )
             elif question.type_field == TYPE_FIELD.url:
+                validators = []
+                max_len = question.get_effective_max_length()
+                if max_len:
+                    validators.append(MaxLengthValidator(max_len))
+                
+                regex = question.get_effective_regex_pattern()
+                if regex:
+                    try:
+                        validators.append(RegexValidator(
+                            regex=regex,
+                            message=question.validation_message or _("Invalid URL format")
+                        ))
+                    except re.error:
+                        pass
+                
                 self.fields[field_name] = forms.URLField(
                     label=question.label,
-                    validators=[MaxLengthValidator(SURVEY_FIELD_VALIDATORS['max_length']['url'])]
+                    validators=validators,
+                    max_length=max_len if max_len else None
                 )
             elif question.type_field == TYPE_FIELD.email:
+                validators = []
+                max_len = question.get_effective_max_length()
+                if max_len:
+                    validators.append(MaxLengthValidator(max_len))
+                
+                regex = question.get_effective_regex_pattern()
+                if regex:
+                    try:
+                        validators.append(RegexValidator(
+                            regex=regex,
+                            message=question.validation_message or _("Invalid email format")
+                        ))
+                    except re.error:
+                        pass
+                
                 self.fields[field_name] = forms.EmailField(
                     label=question.label,
-                    validators=[MaxLengthValidator(SURVEY_FIELD_VALIDATORS['max_length']['email'])]
+                    validators=validators,
+                    max_length=max_len if max_len else None
                 )
             elif question.type_field == TYPE_FIELD.date:
                 self.fields[field_name] = forms.DateField(
@@ -80,9 +126,31 @@ class BaseSurveyForm(forms.Form):
                     input_formats=DATE_INPUT_FORMAT
                 )
             elif question.type_field == TYPE_FIELD.text_area:
+                validators = []
+                
+                min_len = question.get_effective_min_length()
+                if min_len is not None and min_len > 0:
+                    validators.append(MinLengthValidator(min_len))
+                
+                max_len = question.get_effective_max_length()
+                if max_len is not None:
+                    validators.append(MaxLengthValidator(max_len))
+                
+                regex = question.get_effective_regex_pattern()
+                if regex:
+                    try:
+                        validators.append(RegexValidator(
+                            regex=regex,
+                            message=question.validation_message or _("Invalid format")
+                        ))
+                    except re.error:
+                        pass
+                
                 self.fields[field_name] = forms.CharField(
-                    label=question.label, widget=forms.Textarea,
-                    validators=[MinLengthValidator(SURVEY_FIELD_VALIDATORS['min_length']['text_area'])]
+                    label=question.label, 
+                    widget=forms.Textarea,
+                    validators=validators,
+                    max_length=max_len if max_len else None
                 )
             elif question.type_field == TYPE_FIELD.rating:
                 if not question.choices:  # use 5 as default for backward compatibility
@@ -99,12 +167,33 @@ class BaseSurveyForm(forms.Form):
                     validators=[FileTypeValidator(), FileSizeValidator()]
                 )
             else:
+                validators = []
+                
+                # Add min length validator
+                min_len = question.get_effective_min_length()
+                if min_len is not None and min_len > 0:
+                    validators.append(MinLengthValidator(min_len))
+                
+                # Add max length validator
+                max_len = question.get_effective_max_length()
+                if max_len is not None:
+                    validators.append(MaxLengthValidator(max_len))
+                
+                # Add regex validator
+                regex = question.get_effective_regex_pattern()
+                if regex:
+                    try:
+                        validators.append(RegexValidator(
+                            regex=regex,
+                            message=question.validation_message or _("Invalid format")
+                        ))
+                    except re.error:
+                        pass  # Skip invalid regex
+                
                 self.fields[field_name] = forms.CharField(
                     label=question.label,
-                    validators=[
-                        MinLengthValidator(SURVEY_FIELD_VALIDATORS['min_length']['text']),
-                        MaxLengthValidator(SURVEY_FIELD_VALIDATORS['max_length']['text'])
-                    ]
+                    validators=validators,
+                    max_length=max_len if max_len else None
                 )
 
             self.fields[field_name].required = question.required
@@ -127,14 +216,8 @@ class BaseSurveyForm(forms.Form):
 
 
 class CreateSurveyForm(BaseSurveyForm):
-    direction = forms.ModelChoiceField(
-        queryset=Direction.objects.all().order_by('name'),
-        required=True,
-        label="Select your course:",
-        widget=forms.Select(attrs={
-            'class': 'block w-full mt-1 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500'
-        })
-    )
+    # Direction field removed - not needed anymore
+    pass
 
     def __init__(self, survey, user, current_section=None, *args, **kwargs):
         self.survey = survey
@@ -145,14 +228,14 @@ class CreateSurveyForm(BaseSurveyForm):
     def save(self):
         cleaned_data = super().clean()
 
-        # Save UserAnswer and UserAnswer2
+        # Save UserAnswer and UserAnswer2 (without direction)
         user_answer = UserAnswer.objects.create(
             survey=self.survey, user=self.user,
-            direction=cleaned_data.get('direction')
+            direction=None  # No longer require direction
         )
         user_answer2 = UserAnswer2.objects.create(
             survey=self.survey, user=self.user,
-            direction=cleaned_data.get('direction')
+            direction=None  # No longer require direction
         )
 
         # Save general questions

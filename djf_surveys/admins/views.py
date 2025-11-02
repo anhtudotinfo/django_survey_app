@@ -142,7 +142,7 @@ class AdminCreateQuestionView(ContextTitleMixin, CreateView):
             question = form.save(commit=False)
             question.survey = self.survey
             question.save()
-            messages.success(self.request, gettext("%(page_action_name)s bajarildi.") % dict(page_action_name=capfirst(self.title_page.lower())))
+            messages.success(self.request, gettext("%(page_action_name)s succeeded.") % dict(page_action_name=capfirst(self.title_page.lower())))
             return self.form_valid(form)
         else:
             return self.form_invalid(form)
@@ -217,27 +217,40 @@ class DownloadResponseSurveyView(DetailView):
 
         writer = csv.writer(csv_buffer, delimiter=',')
 
-        rows = []
-        header = []
-        for index, user_answer in enumerate(user_answers):
-            if index == 0:
-                header.append('user')
-                header.append('submitted time')
-                header.append('course name')
+        # Get all questions for this survey in order
+        all_questions = Question.objects.filter(survey=survey).order_by('id')
+        
+        # Build header
+        header = ['user', 'submitted time']
+        for question in all_questions:
+            header.append(question.label)
+        writer.writerow(header)
 
-            rows.append(user_answer.user.username if user_answer.user else 'ro‘yxatdan o‘tmagan')
-            rows.append(user_answer.updated_at.strftime("%Y-%m-%d %H:%M:%S"))
-            rows.append(user_answer.direction.name if user_answer.direction else 'yo‘nalish tanlanmagan')
-
-            for answer in user_answer.answer_set.order_by('question__id'):
-                if index == 0:
-                    header.append(answer.question.label)
-                rows.append(answer.get_value_for_csv)
-
-            if index == 0:
-                writer.writerow(header)
-            writer.writerow(rows)
+        # Build rows for each user answer
+        for user_answer in user_answers:
             rows = []
+            rows.append(user_answer.user.username if user_answer.user else 'not registered')
+            rows.append(user_answer.updated_at.strftime("%Y-%m-%d %H:%M:%S"))
+
+            # Create a dictionary of answers by question id for quick lookup
+            answers_dict = {}
+            for answer in user_answer.answer_set.all():
+                answers_dict[answer.question.id] = answer
+
+            # For each question, add answer or null
+            for question in all_questions:
+                if question.id in answers_dict:
+                    answer = answers_dict[question.id]
+                    # For file uploads, get absolute URL using request context
+                    if answer.question.type_field == 10:  # TYPE_FIELD.file
+                        rows.append(answer.get_file_url(request))
+                    else:
+                        rows.append(answer.get_value_for_csv)
+                else:
+                    # Question not answered - add null
+                    rows.append('null')
+
+            writer.writerow(rows)
 
         response = HttpResponse(content_type='text/csv; charset=utf-8')
         response['Content-Disposition'] = f'attachment; filename={survey.slug}.csv'
@@ -249,7 +262,7 @@ class DownloadResponseSurveyView(DetailView):
 class SummaryResponseSurveyView(ContextTitleMixin, DetailView):
     model = Survey
     template_name = "djf_surveys/admins/summary.html"
-    title_page = _("Natija")
+    title_page = _("Summary")
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -311,18 +324,18 @@ class SummaryResponseSurveyView(ContextTitleMixin, DetailView):
         # Generate year and month ranges for the form
         years = range(2024, current_year + 1)
         months = [
-            {'value': 1, 'name': 'Yanvar'},
-            {'value': 2, 'name': 'Fevral'},
-            {'value': 3, 'name': 'Mart'},
-            {'value': 4, 'name': 'Aprel'},
+            {'value': 1, 'name': 'January'},
+            {'value': 2, 'name': 'February'},
+            {'value': 3, 'name': 'March'},
+            {'value': 4, 'name': 'April'},
             {'value': 5, 'name': 'May'},
-            {'value': 6, 'name': 'Iyun'},
-            {'value': 7, 'name': 'Iyul'},
-            {'value': 8, 'name': 'Avgust'},
-            {'value': 9, 'name': 'Sentabr'},
-            {'value': 10, 'name': 'Oktabr'},
-            {'value': 11, 'name': 'Noyabr'},
-            {'value': 12, 'name': 'Dekabr'}
+            {'value': 6, 'name': 'June'},
+            {'value': 7, 'name': 'July'},
+            {'value': 8, 'name': 'August'},
+            {'value': 9, 'name': 'September'},
+            {'value': 10, 'name': 'October'},
+            {'value': 11, 'name': 'November'},
+            {'value': 12, 'name': 'December'}
         ]
 
         context.update({

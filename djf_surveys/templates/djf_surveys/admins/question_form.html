@@ -1,23 +1,179 @@
 {% extends 'djf_surveys/admins/form.html' %}
+{% load i18n %}
+
+{% block extra_content %}
+<!-- File Upload Configuration Panel -->
+<div id="fileUploadConfig" class="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200" style="display: none;">
+    <h4 class="font-semibold mb-3 text-blue-900">{% trans "File Upload Settings" %}</h4>
+    
+    <!-- Allowed File Types -->
+    <div class="mb-4">
+        <label class="block text-sm font-medium mb-2 text-gray-700">{% trans "Allowed File Types:" %}</label>
+        <div class="grid grid-cols-2 gap-2">
+            <label class="flex items-center space-x-2">
+                <input type="checkbox" value="pdf" class="rounded file-type-checkbox" data-ext=".pdf">
+                <span>{% trans "PDF Documents" %}</span>
+            </label>
+            <label class="flex items-center space-x-2">
+                <input type="checkbox" value="doc" class="rounded file-type-checkbox" data-ext=".doc,.docx">
+                <span>{% trans "Word Documents" %}</span>
+            </label>
+            <label class="flex items-center space-x-2">
+                <input type="checkbox" value="image" class="rounded file-type-checkbox" data-ext="image/jpeg,image/png,image/gif">
+                <span>{% trans "Images (JPG, PNG, GIF)" %}</span>
+            </label>
+            <label class="flex items-center space-x-2">
+                <input type="checkbox" value="excel" class="rounded file-type-checkbox" data-ext=".xls,.xlsx">
+                <span>{% trans "Excel Spreadsheets" %}</span>
+            </label>
+        </div>
+        <div class="mt-2">
+            <label class="flex items-center space-x-2">
+                <input type="checkbox" value="other" class="rounded" id="otherFileType">
+                <span>{% trans "Other:" %}</span>
+                <input type="text" id="customFileTypes" placeholder=".txt, .csv"
+                       class="px-2 py-1 border rounded text-sm" style="display: none;">
+            </label>
+        </div>
+    </div>
+    
+    <!-- Max File Size -->
+    <div class="mb-4">
+        <label class="block text-sm font-medium mb-2 text-gray-700">
+            {% trans "Max File Size:" %} <span id="maxSizeDisplay">5</span> MB
+        </label>
+        <input type="range" id="maxFileSize" min="1" max="50" value="5" step="1" 
+               class="w-full">
+    </div>
+    
+    <!-- Multiple Files -->
+    <div class="mb-4">
+        <label class="flex items-center space-x-2">
+            <input type="checkbox" id="allowMultiple" class="rounded">
+            <span>{% trans "Allow Multiple Files" %}</span>
+        </label>
+        <div id="maxFilesSection" class="mt-2 ml-6" style="display: none;">
+            <label class="block text-sm">
+                {% trans "Max Files:" %}
+                <input type="number" id="maxFiles" min="1" max="10" value="3" 
+                       class="px-2 py-1 border rounded w-20">
+            </label>
+        </div>
+    </div>
+    
+    <!-- Live Preview -->
+    <div class="mt-6 p-4 bg-white border-2 border-gray-300 rounded">
+        <h5 class="font-medium mb-2 text-gray-700">{% trans "Preview:" %}</h5>
+        <label class="block mb-1 font-medium" id="previewLabel">{% trans "Upload your file" %}</label>
+        <input type="file" id="previewFileInput"
+               class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+        <small class="text-gray-600 mt-1 block" id="previewHelpText"></small>
+    </div>
+</div>
+{% endblock %}
 
 {% block extra_js %}
     <script>
         var choicesVal = document.getElementById('id_type_field').value;
         var elChoice = document.querySelector("#section_field_id_choices");
+        var elFileConfig = document.getElementById('fileUploadConfig');
 
-        toggleChoices(choicesVal);
+        toggleFields(choicesVal);
 
         document.getElementById('id_type_field').addEventListener('change', function() {
           console.log('You selected: ', this.value);
-          toggleChoices(this.value);
+          toggleFields(this.value);
         });
 
-        function toggleChoices(value) {
+        function toggleFields(value) {
+            // Show choices for radio, select, multi-select
             if (value == 2 || value == 3 || value == 4) {
-              elChoice.hidden = false;
-          } else {
-              elChoice.hidden = true;
-          }
+                elChoice.hidden = false;
+            } else {
+                elChoice.hidden = true;
+            }
+            
+            // Show file config for file upload type (10)
+            if (value == 10) {
+                elFileConfig.style.display = 'block';
+                initFileUploadConfig();
+            } else {
+                elFileConfig.style.display = 'none';
+            }
+        }
+
+        function initFileUploadConfig() {
+            const fileTypeCheckboxes = document.querySelectorAll('.file-type-checkbox');
+            const otherCheckbox = document.getElementById('otherFileType');
+            const customTypesInput = document.getElementById('customFileTypes');
+            const maxSizeInput = document.getElementById('maxFileSize');
+            const maxSizeDisplay = document.getElementById('maxSizeDisplay');
+            const allowMultipleCheckbox = document.getElementById('allowMultiple');
+            const maxFilesSection = document.getElementById('maxFilesSection');
+            const maxFilesInput = document.getElementById('maxFiles');
+            const previewInput = document.getElementById('previewFileInput');
+            const previewHelpText = document.getElementById('previewHelpText');
+            
+            // Update preview when file types change
+            function updatePreview() {
+                const selectedTypes = [];
+                const acceptValues = [];
+                
+                fileTypeCheckboxes.forEach(cb => {
+                    if (cb.checked) {
+                        selectedTypes.push(cb.value.toUpperCase());
+                        acceptValues.push(cb.dataset.ext);
+                    }
+                });
+                
+                if (otherCheckbox.checked && customTypesInput.value) {
+                    acceptValues.push(customTypesInput.value);
+                    selectedTypes.push('Custom');
+                }
+                
+                const acceptAttr = acceptValues.join(',');
+                previewInput.setAttribute('accept', acceptAttr);
+                
+                const maxSize = maxSizeInput.value;
+                let helpText = `{% trans "Accepted:" %} ${selectedTypes.join(', ')} ({% trans "Max" %} ${maxSize}MB)`;
+                
+                if (allowMultipleCheckbox.checked) {
+                    const maxFiles = maxFilesInput.value;
+                    helpText += ` - {% trans "Up to" %} ${maxFiles} {% trans "files" %}`;
+                    previewInput.setAttribute('multiple', 'multiple');
+                } else {
+                    previewInput.removeAttribute('multiple');
+                }
+                
+                previewHelpText.textContent = helpText;
+            }
+            
+            // Event listeners
+            fileTypeCheckboxes.forEach(cb => {
+                cb.addEventListener('change', updatePreview);
+            });
+            
+            otherCheckbox.addEventListener('change', function() {
+                customTypesInput.style.display = this.checked ? 'inline-block' : 'none';
+                updatePreview();
+            });
+            
+            customTypesInput.addEventListener('input', updatePreview);
+            
+            maxSizeInput.addEventListener('input', function() {
+                maxSizeDisplay.textContent = this.value;
+                updatePreview();
+            });
+            
+            allowMultipleCheckbox.addEventListener('change', function() {
+                maxFilesSection.style.display = this.checked ? 'block' : 'none';
+                updatePreview();
+            });
+            
+            maxFilesInput.addEventListener('input', updatePreview);
+            
+            // Initial preview
+            updatePreview();
         }
     </script>
 {% endblock %}

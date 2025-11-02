@@ -4,7 +4,7 @@
 {% block content %}
 
 <div class="max-w-6xl mx-auto mt-10 bg-white p-8 rounded shadow">
-  <h2 class="text-2xl font-semibold mb-6 text-center">O‘quv kurslari ro‘yxati</h2>
+  <h2 class="text-2xl font-semibold mb-6 text-center">List of training courses</h2>
 
   <!-- RESULTS TABLE -->
   <div class="overflow-x-auto">
@@ -26,22 +26,22 @@
             {{ direction.name }}
           </td>
           <td class="px-1 py-1 whitespace-nowrap text-lg text-right space-x-2">
-            <!-- Tahrirlash -->
+            <!-- Edit -->
             <a href="{% url 'djf_surveys:edit_direction' direction.pk %}"
                class="inline-block bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded">
-              Tahrirlash
+              Edit
             </a>
             <!-- Delete -->
             <a href="{% url 'djf_surveys:delete_direction' direction.pk %}"
                class="inline-block bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded">
-              O‘chirish
+               Delete
             </a>
           </td>
         </tr>
         {% empty %}
         <tr>
           <td colspan="3" class="px-1 py-1 whitespace-nowrap text-lg text-gray-500">
-            Hozircha kurslar topilmadi.
+            No courses found yet.
           </td>
         </tr>
         {% endfor %}
@@ -51,7 +51,7 @@
   <div class="mt-6 text-center">
     <a href="{% url 'djf_surveys:add-direction' %}"
        class="inline-block bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors duration-200">
-       Yangi kurs qo‘shish
+       Add New Course
     </a>
   </div>
 </div>

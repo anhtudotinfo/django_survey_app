@@ -84,23 +84,23 @@ class Direction(models.Model):
 
 class Survey(BaseModel):
     name = models.CharField(_("name"), max_length=200)
-    description = models.TextField(_("ta’rif"), default='')
+    description = models.TextField(_("description"), default='')
     slug = models.SlugField(_("slug"), max_length=225, default='')
     editable = models.BooleanField(_("editable"), default=True,
-                                   help_text=_("Agar belgi qo‘yilmasa, foydalanuvchi yozuvni tahrirlay olmaydi."))
-    deletable = models.BooleanField(_("o‘chirib tashlasa bo‘ladigan"), default=True,
-                                    help_text=_("Agar belgi qo‘yilmasa, foydalanuvchi yozuvni o'chira olmaydi."))
+                                   help_text=_("If unchecked, users cannot edit their submissions."))
+    deletable = models.BooleanField(_("deletable"), default=True,
+                                    help_text=_("If unchecked, users cannot delete their submissions."))
     duplicate_entry = models.BooleanField(_("allow multiple submissions"), default=False,
-                                          help_text=_("Agar belgi qo‘yilsa, foydalanuvchi qayta topshirishi mumkin."))
+                                          help_text=_("If checked, users can submit multiple responses."))
     private_response = models.BooleanField(_("private response"), default=False,
-                                           help_text=_("Agar belgi qo‘yilsa, faqat administrator va egasi kira oladi."))
+                                           help_text=_("If checked, only administrators and owners can access responses."))
     can_anonymous_user = models.BooleanField(_("allow anonymous submissions"), default=False,
-                                             help_text=_("Agar belgi qo‘yilsa, autentifikatsiyasiz foydalanuvchi yuboradi."))
+                                             help_text=_("If checked, unauthenticated users can submit responses."))
     notification_to = models.TextField(_("notification email"), blank=True, null=True,
                                        help_text=_("Enter email addresses to notify on submission"))
     success_page_content = models.TextField(
         _("success page content"), blank=True, null=True,
-        help_text=_("Muvaffaqiyatli sahifasi shu yerda o‘zgartirishingiz mumkin. HTML sintaksisi qo‘llab-quvvatlanadi")
+        help_text=_("You can customize the success page here. HTML syntax is supported.")
     )
 
     class Meta:
@@ -117,6 +117,54 @@ class Survey(BaseModel):
         else:
             self.slug = generate_unique_slug(Survey, self.name, self.id)
         super().save(*args, **kwargs)
+    
+    def get_absolute_url(self):
+        """Get the full URL for this survey."""
+        from django.urls import reverse
+        return reverse('djf_surveys:detail', kwargs={'slug': self.slug})
+    
+    def generate_qr_code(self, request=None):
+        """
+        Generate QR code for survey URL.
+        Returns base64 encoded image data.
+        """
+        import qrcode
+        import io
+        import base64
+        from django.urls import reverse
+        
+        # Get full URL
+        if request:
+            survey_url = request.build_absolute_uri(self.get_absolute_url())
+        else:
+            # Fallback to relative URL if no request
+            survey_url = self.get_absolute_url()
+        
+        # Generate QR code
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_L,
+            box_size=10,
+            border=4,
+        )
+        qr.add_data(survey_url)
+        qr.make(fit=True)
+        
+        # Create image
+        img = qr.make_image(fill_color="black", back_color="white")
+        
+        # Convert to base64
+        buffer = io.BytesIO()
+        img.save(buffer, format='PNG')
+        buffer.seek(0)
+        img_base64 = base64.b64encode(buffer.getvalue()).decode()
+        
+        return f"data:image/png;base64,{img_base64}"
+    
+    def get_qr_download_url(self):
+        """Get URL to download QR code."""
+        from django.urls import reverse
+        return reverse('djf_surveys:survey_qr_download', kwargs={'slug': self.slug})
 
 
 class Section(BaseModel):
@@ -165,7 +213,7 @@ class Question(BaseModel):
 
     key = models.CharField(
         _("key"), max_length=225, unique=True, null=True, blank=True,
-        help_text=_("Noyob kalit savol matnidan avtomatik yaratiladi. Yaratishni istasangiz, bo‘sh joyni to‘ldiring.")
+        help_text=_("Unique key automatically generated from question text. Leave blank to auto-generate.")
     )
     survey = models.ForeignKey(Survey, related_name='questions', on_delete=models.CASCADE, verbose_name=_("survey"))
     section = models.ForeignKey(Section, related_name='questions', on_delete=models.SET_NULL, null=True, blank=True, verbose_name=_("section"))
@@ -174,8 +222,8 @@ class Question(BaseModel):
         _("choices"),
         blank=True, null=True,
         help_text=_(
-            "Agar maydon turi radio, tanlanadigan yoki ko‘p variantli bo‘lsa, ajratilgan variantlarni to‘ldiring"
-            "vergullar bilan. Masalan: Erkak, Ayol")
+            "If field type is radio, select, or multi-select, enter options separated by"
+            "commas. Example: Male, Female")
     )
     help_text = models.CharField(
         _("help text"),
@@ -183,9 +231,41 @@ class Question(BaseModel):
         help_text=_("You can enter help text here.")
     )
     required = models.BooleanField(_("required"), default=True,
-                                   help_text=_("Agar belgi qo‘yilsa, foydalanuvchi ushbu savolga javob berishi kerak."))
+                                   help_text=_("If checked, users must answer this question."))
     ordering = models.PositiveIntegerField(_("ordering"), default=0,
-                                           help_text=_("So‘rovnomalar doirasida savollar tartibini belgilaydi."))
+                                           help_text=_("Determines the order of questions within the survey."))
+    enable_branching = models.BooleanField(_("enable branching"), default=False,
+                                           help_text=_("Enable section branching for this question (radio type only)"))
+    branch_config = models.JSONField(_("branch configuration"), default=dict, blank=True,
+                                     help_text=_("Maps each choice to target section ID"))
+    
+    # Validation fields
+    min_length = models.PositiveIntegerField(
+        _("minimum length"), 
+        null=True, 
+        blank=True,
+        help_text=_("Minimum number of characters required (for text fields). Leave blank for no minimum.")
+    )
+    max_length = models.PositiveIntegerField(
+        _("maximum length"), 
+        null=True, 
+        blank=True,
+        help_text=_("Maximum number of characters allowed (for text fields). Leave blank for default maximum.")
+    )
+    regex_pattern = models.CharField(
+        _("regex pattern"),
+        max_length=500,
+        null=True,
+        blank=True,
+        help_text=_("Regular expression pattern for validation (e.g., ^[A-Z0-9]+$ for alphanumeric). Leave blank for no pattern matching.")
+    )
+    validation_message = models.CharField(
+        _("validation message"),
+        max_length=200,
+        null=True,
+        blank=True,
+        help_text=_("Custom error message to display when validation fails. Leave blank for default message.")
+    )
 
     class Meta:
         verbose_name = _("question")
@@ -202,6 +282,155 @@ class Question(BaseModel):
             self.key = generate_unique_slug(Question, self.label, self.id, "key")
 
         super(Question, self).save(*args, **kwargs)
+    
+    def get_branch_target(self, option_value):
+        """
+        Get target section ID for a given choice value.
+        
+        Args:
+            option_value: The choice value selected by user
+            
+        Returns:
+            Section ID to navigate to, or None if no branching configured
+        """
+        if not self.enable_branching or not self.branch_config:
+            return None
+        
+        # Normalize the option value for comparison - must match save logic
+        from djf_surveys.utils_normalize import normalize_choice_key
+        normalized_value = normalize_choice_key(str(option_value))
+        
+        # Check direct match first
+        if normalized_value in self.branch_config:
+            return self.branch_config[normalized_value]
+        
+        # Check with original value
+        if option_value in self.branch_config:
+            return self.branch_config[option_value]
+        
+        return None
+    
+    def set_branch_target(self, option_value, section_id):
+        """
+        Set target section for a given choice value.
+        
+        Args:
+            option_value: The choice value
+            section_id: Target section ID (or None to end survey)
+        """
+        if not self.branch_config:
+            self.branch_config = {}
+        
+        normalized_value = str(option_value).strip().lower().replace(' ', '_')
+        self.branch_config[normalized_value] = section_id
+    
+    @property
+    def has_branching_configured(self):
+        """Check if branching is enabled and configured."""
+        return self.enable_branching and bool(self.branch_config)
+    
+    def get_validation_defaults(self):
+        """
+        Get default validation values based on field type.
+        
+        Returns:
+            dict: Dictionary with min_length, max_length, and regex_pattern defaults
+        """
+        defaults = {
+            TYPE_FIELD.text: {'min_length': 0, 'max_length': 500, 'regex_pattern': None},
+            TYPE_FIELD.text_area: {'min_length': 0, 'max_length': 5000, 'regex_pattern': None},
+            TYPE_FIELD.number: {'min_length': None, 'max_length': None, 'regex_pattern': r'^\d+$'},
+            TYPE_FIELD.url: {'min_length': 0, 'max_length': 2048, 'regex_pattern': r'^https?://.*'},
+            TYPE_FIELD.email: {'min_length': 0, 'max_length': 254, 'regex_pattern': r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'},
+            TYPE_FIELD.radio: {'min_length': None, 'max_length': None, 'regex_pattern': None},
+            TYPE_FIELD.select: {'min_length': None, 'max_length': None, 'regex_pattern': None},
+            TYPE_FIELD.multi_select: {'min_length': None, 'max_length': None, 'regex_pattern': None},
+            TYPE_FIELD.date: {'min_length': None, 'max_length': None, 'regex_pattern': r'^\d{4}-\d{2}-\d{2}$'},
+            TYPE_FIELD.rating: {'min_length': None, 'max_length': None, 'regex_pattern': None},
+            TYPE_FIELD.file: {'min_length': None, 'max_length': None, 'regex_pattern': None},
+        }
+        return defaults.get(self.type_field, {'min_length': None, 'max_length': None, 'regex_pattern': None})
+    
+    def get_effective_min_length(self):
+        """Get effective minimum length (custom or default)."""
+        if self.min_length is not None:
+            return self.min_length
+        return self.get_validation_defaults().get('min_length')
+    
+    def get_effective_max_length(self):
+        """Get effective maximum length (custom or default)."""
+        if self.max_length is not None:
+            return self.max_length
+        return self.get_validation_defaults().get('max_length')
+    
+    def get_effective_regex_pattern(self):
+        """Get effective regex pattern (custom or default)."""
+        if self.regex_pattern:
+            return self.regex_pattern
+        return self.get_validation_defaults().get('regex_pattern')
+    
+    def validate_answer(self, value):
+        """
+        Validate an answer value against this question's validation rules.
+        
+        Args:
+            value: The answer value to validate
+            
+        Returns:
+            tuple: (is_valid: bool, error_message: str or None)
+        """
+        import re
+        
+        # Skip validation for non-text fields that don't support it
+        if self.type_field in [TYPE_FIELD.radio, TYPE_FIELD.select, TYPE_FIELD.multi_select, 
+                              TYPE_FIELD.rating, TYPE_FIELD.file]:
+            return True, None
+        
+        # Convert to string for validation
+        value_str = str(value) if value is not None else ''
+        
+        # Check minimum length
+        min_len = self.get_effective_min_length()
+        if min_len is not None and len(value_str) < min_len:
+            if self.validation_message:
+                return False, self.validation_message
+            return False, f"Minimum {min_len} characters required"
+        
+        # Check maximum length
+        max_len = self.get_effective_max_length()
+        if max_len is not None and len(value_str) > max_len:
+            if self.validation_message:
+                return False, self.validation_message
+            return False, f"Maximum {max_len} characters allowed"
+        
+        # Check regex pattern
+        pattern = self.get_effective_regex_pattern()
+        if pattern and value_str:
+            try:
+                if not re.match(pattern, value_str):
+                    if self.validation_message:
+                        return False, self.validation_message
+                    return False, "Invalid format"
+            except re.error:
+                # Invalid regex pattern
+                return True, None
+        
+        return True, None
+    
+    def get_validation_rules_dict(self):
+        """
+        Get validation rules as a dictionary for frontend use.
+        
+        Returns:
+            dict: Validation rules including defaults
+        """
+        return {
+            'min_length': self.get_effective_min_length(),
+            'max_length': self.get_effective_max_length(),
+            'regex_pattern': self.get_effective_regex_pattern(),
+            'validation_message': self.validation_message or 'Invalid input',
+            'required': self.required,
+        }
 
 
 class UserAnswer(BaseModel):
@@ -228,6 +457,7 @@ class Answer(BaseModel):
     question = models.ForeignKey(Question, related_name="answers", on_delete=models.CASCADE, null=True, verbose_name=_("question"))
     value = models.TextField(_("value"), help_text=_("Value of the answer provided by the user."))
     file_value = models.FileField(_("file"), upload_to=upload_survey_file, null=True, blank=True)
+    file_url = models.URLField(_("file URL"), max_length=500, blank=True, null=True, help_text=_("Accessible URL for uploaded file"))
     user_answer = models.ForeignKey(UserAnswer, on_delete=models.CASCADE, verbose_name=_("user answer"))
 
     class Meta:
@@ -260,9 +490,34 @@ class Answer(BaseModel):
         else:
             return self.value
 
+    def get_file_url(self, request=None):
+        """
+        Get accessible URL for file upload.
+        
+        Returns file_url if available, otherwise generates from file_value.
+        For CSV exports, this ensures a clickable URL is always available.
+        """
+        if self.file_url:
+            return self.file_url
+        
+        if self.file_value:
+            if request:
+                from django.urls import reverse
+                download_url = reverse('djf_surveys:download_file', kwargs={'answer_id': self.id})
+                return request.build_absolute_uri(download_url)
+            else:
+                import os
+                return self.file_value.url if self.file_value else ""
+        
+        return ""
+    
     @property
     def get_value_for_csv(self):
-        if self.question.type_field == TYPE_FIELD.radio or self.question.type_field == TYPE_FIELD.select or \
+        """Get value formatted for CSV export."""
+        if self.question.type_field == TYPE_FIELD.file:
+            # Return the accessible file URL for CSV
+            return self.get_file_url()
+        elif self.question.type_field == TYPE_FIELD.radio or self.question.type_field == TYPE_FIELD.select or \
                 self.question.type_field == TYPE_FIELD.multi_select:
             return self.value.strip().replace("_", " ").capitalize()
         else:
@@ -511,10 +766,10 @@ class Question2(BaseModel):
     )
     key = models.CharField(
         _("key"), max_length=225, unique=True, null=True, blank=True,
-        help_text=_("Noyob kalit savol matnidan avtomatik yaratiladi. Yaratishni istasangiz, bo‘sh joyni to‘ldiring.")
+        help_text=_("Unique key automatically generated from question text. Leave blank to auto-generate.")
     )
     survey = models.ForeignKey(Survey, related_name='questions2', on_delete=models.CASCADE, verbose_name=_("survey"))
-    label = models.CharField(_("yorliq"), max_length=500, help_text=_("Enter your question here."))
+    label = models.CharField(_("label"), max_length=500, help_text=_("Enter your question here."))
     choices = models.TextField(
         _("choices"),
         blank=True, null=True,
@@ -526,9 +781,9 @@ class Question2(BaseModel):
         help_text=_("You can enter help text here.")
     )
     required = models.BooleanField(_("required"), default=True,
-                                   help_text=_("Agar belgi qo‘yilsa, foydalanuvchi ushbu savolga javob berishi kerak."))
+                                   help_text=_("If checked, users must answer this question."))
     ordering = models.PositiveIntegerField(_("ordering"), default=0,
-                                           help_text=_("So‘rovnomalar doirasida savollar tartibini belgilaydi."))
+                                           help_text=_("Determines the order of questions within the survey."))
 
     class Meta:
         verbose_name = _("rating question")
@@ -583,7 +838,7 @@ class UserRating(BaseModel):
 
 class Answer2(BaseModel):
     question = models.ForeignKey(Question2, related_name="answers2", on_delete=models.CASCADE, verbose_name=_("question2"))
-    value = models.PositiveIntegerField(_("value"), help_text=_("Reyting qiymati, masalan, 1 dan 5 gacha."))  # Reyting qiymat uchun moslashtirilgan
+    value = models.PositiveIntegerField(_("value"), help_text=_("Rating value, for example, from 1 to 5."))  # Adapted for rating value
     user_rating = models.ForeignKey(UserRating, on_delete=models.CASCADE, verbose_name=_("user rating"))
 
     class Meta:
@@ -593,6 +848,50 @@ class Answer2(BaseModel):
 
     def __str__(self):
         return f"{self.question}: {self.value} (Rated user: {self.user_rating.rated_user})"
+
+
+class StorageConfiguration(BaseModel):
+    """
+    Configuration for file storage backend.
+    
+    Only one configuration can be active at a time.
+    Supports local filesystem and Google Drive storage.
+    """
+    PROVIDER_CHOICES = [
+        ('local', 'Local Storage'),
+        ('google_drive', 'Google Drive'),
+    ]
+    
+    provider = models.CharField(_("storage provider"), max_length=20, choices=PROVIDER_CHOICES, default='local')
+    credentials = models.JSONField(_("credentials"), default=dict, blank=True, help_text=_("Encrypted credentials for cloud storage"))
+    config = models.JSONField(_("configuration"), default=dict, blank=True, help_text=_("Additional configuration options"))
+    is_active = models.BooleanField(_("is active"), default=False)
+    
+    class Meta:
+        verbose_name = _("storage configuration")
+        verbose_name_plural = _("Storage Configurations")
+        ordering = ["-created_at"]
+    
+    def __str__(self):
+        return f"{self.get_provider_display()} {'(Active)' if self.is_active else ''}"
+    
+    def save(self, *args, **kwargs):
+        """Ensure only one configuration is active at a time."""
+        if self.is_active:
+            StorageConfiguration.objects.filter(is_active=True).update(is_active=False)
+        super().save(*args, **kwargs)
+    
+    @classmethod
+    def get_active(cls):
+        """Get the currently active storage configuration."""
+        return cls.objects.filter(is_active=True).first()
+    
+    def test_connection(self):
+        """Test connection to the configured storage provider."""
+        from djf_surveys.storage import StorageManager
+        manager = StorageManager()
+        backend = manager._create_backend(self.provider, self.config, self.credentials)
+        return backend.test_connection()
 
 
 # Signal handlers for file cleanup

@@ -1,0 +1,268 @@
+{% extends 'djf_surveys/master.html' %}
+{% load djf_survey_tags static i18n %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'djf_surveys/css/rating.css' %}"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <style>
+        .user-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .user-name {
+            font-size: 16px;
+        }
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #4ade80;
+        }
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="flex py-1 fixed bottom-10 right-10">
+        <button
+            class="z-20 block p-4 text-blue-100 transition-all bg-blue-700 border-2 border-white rounded-full active:bg-purple-50 hover:scale-110 focus:outline-none focus:ring"
+            data-te-toggle="modal"
+            data-te-target="#addQuestion"
+            data-te-ripple-init
+            data-te-ripple-color="light"
+            type="button">
+            {% include "djf_surveys/buttons/add_button.html" with size=6 %}
+            <span class="items-center float-right"> {% trans 'Savol qo‘shish' %} </span>
+        </button>
+    </div>
+
+    <div class="max-w-screen-xl px-4 py-16 mx-auto sm:px-6 lg:px-8">
+        <div class="max-w-lg mx-auto">
+            <div class="flex -space-x-4 hover:space-x-1 py-1 float-right">
+                <a href="{% url 'djf_surveys:admin_edit_survey' object.slug %}"
+                   class="z-20 block p-4 text-blue-700 transition-all bg-blue-100 border-2 border-white rounded-full active:bg-blue-50 hover:scale-110 focus:outline-none focus:ring"
+                   type="button">
+                    {% include "djf_surveys/buttons/edit_button.html" %}
+                </a>
+                <a href="#" class="button-share z-20 block p-4 text-amber-700 transition-all bg-amber-100 border-2 border-white rounded-full active:bg-amber-50 hover:scale-110 focus:outline-none focus:ring"
+                    type="button" data-share-link="{% url 'djf_surveys:share_link' object.slug %}">
+                    {% include "djf_surveys/buttons/share_button.html" %}
+                </a>
+                <a class="button-delete z-30 block p-4 text-red-700 transition-all bg-red-100 border-2 border-white rounded-full hover:scale-110 focus:outline-none focus:ring active:bg-red-50"
+                   data-te-toggle="modal"
+                   data-te-target="#modalDelete"
+                   data-mdb-object_name="{{ object.name }}"
+                   data-mdb-object_delete_url="{% url 'djf_surveys:admin_delete_survey' object.slug %}">
+                    {% include "djf_surveys/buttons/delete_button.html" %}
+                </a>
+            </div>
+            <h1 class="text-2xl font-bold text-center text-blue-500 sm:text-3xl">{{ title_page }}</h1>
+
+            <p class="max-w-md mx-auto mt-4 text-center text-gray-500">
+                {{ sub_title_page }}
+            </p>
+
+            <form method="post" class="mx-auto mt-12" id="sortable">
+                {% csrf_token %}
+                {% for field in form %}
+                    <div class="ui-state-default" id="{{ field|get_id_field }}">
+                        <div class="flex -space-x-4 hover:space-x-1 py-1">
+                            <a href="{% url 'djf_surveys:admin_edit_question' field|get_id_field  %}"
+                               class="z-20 block p-4 text-blue-700 transition-all bg-blue-100 border-2 border-white rounded-full active:bg-blue-50 hover:scale-110 focus:outline-none focus:ring"
+                               type="button">
+                                {% include "djf_surveys/buttons/edit_button.html" %}
+                            </a>
+
+                            <a class="button-delete z-30 block p-4 text-red-700 transition-all bg-red-100 border-2 border-white rounded-full hover:scale-110 focus:outline-none focus:ring active:bg-red-50"
+                               data-te-toggle="modal"
+                               data-te-target="#modalDelete"
+                               data-mdb-object_name="{{ field.label }}"
+                               data-mdb-object_delete_url="{% url 'djf_surveys:admin_delete_question' field|get_id_field %}">
+                                {% include "djf_surveys/buttons/delete_button.html" %}
+                            </a>
+
+                        </div>
+
+                        <a href="#"
+                           class="float-right z-30 block p-2 m-2 text-gray-500 transition-all bg-gray-100 border-2 border-white rounded-full hover:scale-110 focus:outline-none focus:ring active:bg-red-50">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11"/>
+                            </svg>
+                        </a>
+                        <div class="p-8 mb-6 rounded-lg shadow-md border border-gray-200 bg-white">
+                            <label for="email" class="text-lg font-medium">{{ field.label }}</label>
+
+                            <div class="mt-1">
+                                {% if field.field.widget.input_type == 'radio' or field.field.widget.input_type == 'checkbox' %}
+                                    {{ field }}
+                                {% else %}
+                                    {{ field|addclass:'w-full p-4 pr-12 text-sm border-gray-500 rounded-lg shadow-sm' }}
+                                {% endif %}
+                            </div>
+                            <p class="text-xs text-gray-400 mt-2">{{ field.help_text }}</p>
+                        </div>
+                    </div>
+
+                {% endfor %}
+            </form>
+        </div>
+
+        {% include 'djf_surveys/components/modal_delete.html' %}
+        {% include 'djf_surveys/components/modal_choice_field_type.html' %}
+    </div>
+
+    <div class="max-w-screen-xl px-4 py-16 mx-auto sm:px-6 lg:px-8">
+        <div class="max-w-lg mx-auto">
+            <!-- Existing content... -->
+
+            <h2 class="text-xl font-semibold mb-4">Professor to be evaluated-List of teachers</h2>
+            <div class="bg-white shadow overflow-hidden sm:rounded-md">
+                <ul class="divide-y divide-gray-200">
+                    {% for user in eligible_users %}
+                        <li class="user-row">
+                            <span class="user-name">{{ user.rank }} {{ user.user.last_name }} {{ user.user.first_name }}</span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" class="can-be-rated-checkbox" data-user-id="{{ user.id }}" {% if user.can_be_rated %}checked{% endif %}>
+                                <span class="slider"></span>
+                            </label>
+                        </li>
+                    {% empty %}
+                        <li class="px-6 py-4">No users found!</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+
+        <!-- Existing modals... -->
+    </div>
+
+
+
+{% endblock %}
+
+{% block extra_js %}
+    <script src="https://code.jquery.com/jquery-3.6.1.js"></script>
+    <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.js"></script>
+    <script>
+        $(function () {
+            $("#sortable").sortable({
+                opacity: 0.7,
+                update: function (event, ui) {
+                    const order = $(this).sortable('toArray');
+                    console.log(order);
+                    $.ajax({
+                        url: "{% url 'djf_surveys:admin_change_order_question' %}",
+                        type: 'POST',
+                        headers: {"X-CSRFToken": '{{csrf_token}}'},
+                        data: {
+                            'order_question': order.toString(),
+                        },
+                        dataType: 'json',
+                        success: function (data) {
+                            console.log(data.message);
+                        },
+                        error: function (data) {
+                            alert("{% trans 'An error occurred!' %}");
+                        }
+                    });
+                }
+            });
+        });
+    </script>
+
+    <script>
+        $(document).ready(function() {
+            // Handle sortable if needed
+            $("#sortable").sortable({
+                opacity: 0.7,
+                update: function (event, ui) {
+                    const order = $(this).sortable('toArray');
+                    console.log(order);
+                    $.ajax({
+                        url: "{% url 'djf_surveys:admin_change_order_question' %}",
+                        type: 'POST',
+                        headers: {"X-CSRFToken": '{{ csrf_token }}'},
+                        data: {
+                            'order_question': order.toString(),
+                        },
+                        dataType: 'json',
+                        success: function (data) {
+                            console.log(data.message);
+                        },
+                        error: function (data) {
+                            alert("{% trans 'An error occurred!' %}");
+                        }
+                    });
+                }
+            });
+
+            // Handle checkbox toggle
+            $('.can-be-rated-checkbox').change(function() {
+                const userId = $(this).data('user-id');
+                const canBeRated = $(this).is(':checked');
+
+                $.ajax({
+                    url: window.location.href,  // Current URL
+                    type: 'POST',
+                    headers: {"X-CSRFToken": '{{ csrf_token }}'},
+                    data: {
+                        'user_id': userId,
+                        'can_be_rated': canBeRated,
+                    },
+                    dataType: 'json',
+                    success: function(response) {
+                        if(response.status === 'success') {
+                            console.log(`User ${userId} can be rated: ${response.can_be_rated}`);
+                        } else {
+                            alert(response.message);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        alert("{% trans 'Failed to update user status.' %}");
+                        // Optionally, revert the checkbox state
+                        location.reload();
+                    }
+                });
+            });
+        });
+    </script>
+
+    {% include 'djf_surveys/components/modal_delete_js.html' %}
+    {% include 'djf_surveys/components/share_link_button_js.html' %}
+{% endblock %}

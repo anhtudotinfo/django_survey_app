@@ -21,18 +21,76 @@ class BranchEvaluator:
         """
         Evaluate branch rules against provided answers.
         
+        Priority: Question-level branching > Section-level rules > Sequential next
+        
         Args:
             answers: Dict mapping question_id to answer value
             
         Returns:
             Next Section object if rule matches, None if no match or end survey
         """
+        # First, check for question-level branching in this section
+        # Question-level branching takes precedence over section rules
+        next_section = self._evaluate_question_branching(answers)
+        if next_section is not False:  # False means no question branching, None means end survey
+            return next_section
+        
+        # Fall back to section-level branch rules
         for rule in self.rules:
             if self._evaluate_rule(rule, answers):
                 return rule.next_section  # Can be None (end survey)
         
         # No matching rule, return None (caller should use sequential next)
         return None
+    
+    def _evaluate_question_branching(self, answers: Dict[int, Any]):
+        """
+        Check if any radio questions in this section have branching configured.
+        
+        Args:
+            answers: Dict mapping question_id to answer value
+            
+        Returns:
+            Section object to navigate to, None to end survey, or False if no question branching
+        """
+        from .models import TYPE_FIELD  # Import here to avoid circular imports
+        
+        # Get all radio questions in this section with branching enabled
+        questions_with_branching = Question.objects.filter(
+            section=self.section,
+            enable_branching=True,
+            type_field=TYPE_FIELD.radio  # Only radio questions support branching
+        )
+        
+        for question in questions_with_branching:
+            if question.id in answers:
+                answer_value = answers[question.id]
+                target_section_id = question.get_branch_target(answer_value)
+                
+                if target_section_id is not None:
+                    # Found a branching target
+                    if target_section_id == 0 or target_section_id == '':
+                        # Special case: end survey
+                        return None
+                    
+                    # Get the target section
+                    try:
+                        target_section = Section.objects.get(
+                            id=target_section_id,
+                            survey=self.section.survey
+                        )
+                        return target_section
+                    except Section.DoesNotExist:
+                        # Invalid target, log and continue
+                        import logging
+                        logger = logging.getLogger(__name__)
+                        logger.warning(
+                            f"Question {question.id} has invalid branch target: {target_section_id}"
+                        )
+                        continue
+        
+        # No question-level branching found
+        return False
     
     def _evaluate_rule(self, rule: BranchRule, answers: Dict[int, Any]) -> bool:
         """

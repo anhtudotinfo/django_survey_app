@@ -2,6 +2,7 @@ from django.urls import path
 from djf_surveys.admins import views as admin_views
 from djf_surveys.admins.v2 import views as admin_views_v2
 from djf_surveys.admins.views import DirectionsListView, DirectionUpdateView, DirectionDeleteView, DirectionAddView
+from djf_surveys.admins import api_views
 
 urlpatterns = [
     path('', admin_views.AdminSurveyListView.as_view(), name='admin_survey'),
@@ -20,4 +21,13 @@ urlpatterns = [
     path('directions/add/', DirectionAddView.as_view(), name='add-direction'),
     path('directions/edit/<int:pk>/', DirectionUpdateView.as_view(), name='edit_direction'),
     path('directions/delete/<int:pk>/', DirectionDeleteView.as_view(), name='delete_direction'),
+    
+    # API endpoints for enhanced survey builder
+    path('api/survey/<slug:slug>/sections/', api_views.SurveySectionsAPIView.as_view(), name='api_survey_sections'),
+    path('api/section/create/', api_views.SectionCreateAPIView.as_view(), name='api_section_create'),
+    path('api/section/<int:pk>/update/', api_views.SectionUpdateAPIView.as_view(), name='api_section_update'),
+    path('api/section/<int:pk>/delete/', api_views.SectionDeleteAPIView.as_view(), name='api_section_delete'),
+    path('api/sections/reorder/', api_views.SectionsReorderAPIView.as_view(), name='api_sections_reorder'),
+    path('api/question/<int:pk>/move/', api_views.QuestionMoveAPIView.as_view(), name='api_question_move'),
+    path('api/question/<int:pk>/delete/', api_views.QuestionDeleteAPIView.as_view(), name='api_question_delete'),
 ]
