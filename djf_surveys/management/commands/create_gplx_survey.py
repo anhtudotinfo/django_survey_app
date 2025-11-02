@@ -7,7 +7,7 @@ Usage:
 """
 
 from django.core.management.base import BaseCommand
-from djf_surveys.models import Survey, Section, Question, TYPE_FIELD
+from djf_surveys.models import Survey, Section, Question, BranchRule, TYPE_FIELD
 
 
 class Command(BaseCommand):
@@ -310,13 +310,59 @@ class Command(BaseCommand):
                 required=True
             )
             
-            # Configure branching logic
-            branch_question.branch_config = {
-                '1_gplx': section4.id,
-                '2_gplx': section4.id,
-                '3_gplx': section4.id
-            }
-            branch_question.save()
+            # Configure branching logic with BranchRules
+            # After Section 4, check how many GPLX were selected
+            
+            # If user selected "1 GPLX", skip directly to Section 7 (Cam kết)
+            BranchRule.objects.create(
+                section=section4,
+                condition_question=branch_question,
+                condition_operator='equals',
+                condition_value='1 GPLX',
+                next_section=section7,
+                priority=0
+            )
+            
+            # If user selected "2 GPLX", go to Section 5 (GPLX 2)
+            BranchRule.objects.create(
+                section=section4,
+                condition_question=branch_question,
+                condition_operator='equals',
+                condition_value='2 GPLX',
+                next_section=section5,
+                priority=1
+            )
+            
+            # If user selected "3 GPLX", go to Section 5 (default flow)
+            BranchRule.objects.create(
+                section=section4,
+                condition_question=branch_question,
+                condition_operator='equals',
+                condition_value='3 GPLX',
+                next_section=section5,
+                priority=2
+            )
+            
+            # After Section 5, check if we should skip Section 6
+            # If user selected "2 GPLX", skip to Section 7
+            BranchRule.objects.create(
+                section=section5,
+                condition_question=branch_question,
+                condition_operator='equals',
+                condition_value='2 GPLX',
+                next_section=section7,
+                priority=0
+            )
+            
+            # If user selected "3 GPLX", continue to Section 6
+            BranchRule.objects.create(
+                section=section5,
+                condition_question=branch_question,
+                condition_operator='equals',
+                condition_value='3 GPLX',
+                next_section=section6,
+                priority=1
+            )
             
             self.stdout.write(
                 self.style.SUCCESS(
@@ -328,12 +374,16 @@ class Command(BaseCommand):
             self.stdout.write(f'   URL: /surveys/{survey.slug}/')
             self.stdout.write(f'   Sections created: 7')
             self.stdout.write(f'   Total questions: {survey.questions.count()}')
+            self.stdout.write(f'   Branching rules created: {BranchRule.objects.filter(section__survey=survey).count()}')
             self.stdout.write('')
             self.stdout.write(
-                self.style.WARNING(
-                    '⚠️  Note: Branching logic requires manual configuration in admin'
+                self.style.SUCCESS(
+                    '✅ Branching logic configured successfully!'
                 )
             )
+            self.stdout.write('   Flow: 1 GPLX → Section 4 → Section 7')
+            self.stdout.write('   Flow: 2 GPLX → Section 4 → Section 5 → Section 7')
+            self.stdout.write('   Flow: 3 GPLX → Section 4 → Section 5 → Section 6 → Section 7')
             
         except Exception as e:
             self.stdout.write(

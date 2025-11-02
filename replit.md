@@ -102,6 +102,36 @@ python manage.py collectstatic --noinput
 python manage.py runserver 0.0.0.0:5000
 ```
 
+### Initial Setup Commands
+The project includes automated setup commands for deployment:
+
+```bash
+# Complete initial setup (admin + surveys)
+python manage.py setup_initial_data
+
+# Force recreate surveys
+python manage.py setup_initial_data --force
+
+# Individual commands (optional)
+python manage.py create_admin
+python manage.py create_gplx_survey
+python manage.py create_vehicle_survey
+```
+
+**What these commands create:**
+1. **create_admin**: Creates admin user with username `admin` and password `Vbpo@12345`
+2. **create_gplx_survey**: Creates "KHAI BÁO GIẤY PHÉP LÁI XE MÔ TÔ" survey (31 questions, 7 sections)
+   - Multi-section form for motorcycle license registration
+   - Supports 1-3 GPLX declarations per submission
+   - Includes file uploads for license photos
+   - URL: `/surveys/khai-bao-gplx-mo-to/`
+3. **create_vehicle_survey**: Creates "KHAI BÁO THÔNG TIN PHƯƠNG TIỆN" survey (39 questions, 7 sections)
+   - Multi-section form for vehicle information
+   - Supports 1-3 vehicles per submission
+   - Includes file uploads for vehicle registration photos
+   - URL: `/surveys/khai-bao-phuong-tien/`
+4. **setup_initial_data**: Runs all three commands above in sequence
+
 ## Deployment
 
 ### Replit Deployment
@@ -151,6 +181,11 @@ The application is configured for Replit deployment using:
 - Added myenv/ to .gitignore
 - Collected static files for production readiness
 - Corrected Django version documentation (5.2.7)
+- **New**: Created automated deployment setup commands:
+  - `create_admin`: Auto-creates admin user (admin/Vbpo@12345)
+  - `create_gplx_survey`: Creates motorcycle license survey template (31 questions)
+  - `create_vehicle_survey`: Creates vehicle information survey template (39 questions)
+  - `setup_initial_data`: Master command that runs all setup scripts
 
 ## User Preferences
 None specified yet.
