@@ -19,25 +19,13 @@ ALLOWED_HOSTS = config('ALLOWED_HOSTS',
                        cast=lambda v: [s.strip() for s in v.split(',')])
 
 ALLOWED_HOSTS = [
-    '0.0.0.0', 'localhost', '127.0.0.1', '.replit.dev', '.repl.co', '.pike.replit.dev'
+    '0.0.0.0', 'localhost', '127.0.0.1', '.replit.dev', '.repl.co', '.minds.vn'
 ]
-
-# CSRF Trusted Origins - Dynamic configuration for Replit domains
-CSRF_TRUSTED_ORIGINS = []
-
-# Get Replit domain from environment
-replit_domain = os.environ.get('REPLIT_DEV_DOMAIN')
-if replit_domain:
-    CSRF_TRUSTED_ORIGINS.append(f'https://{replit_domain}')
-
-# Fallback: Accept all common Replit domain patterns
-# This is safe because ALLOWED_HOSTS already restricts which hosts can serve the app
-if not CSRF_TRUSTED_ORIGINS:
-    CSRF_TRUSTED_ORIGINS = [
-        'https://*.replit.dev',
-        'https://*.pike.replit.dev',
-        'https://*.repl.co',
-    ]
+CSRF_TRUSTED_ORIGINS = [
+    'https://9dd48b78-2dac-476e-bfb3-9af84321714c-00-1dsargfg77ohe.worf.replit.dev',
+    'https://cfb26995-734a-4e73-819e-2cba34de061d-00-362vd8ixrfkqk.pike.replit.dev/',
+    'https://thuthapthongtinphuongankhe.minds.vn'
+]
 # Application definition
 
 INSTALLED_APPS = [
