@@ -91,8 +91,11 @@ class SurveyForm(forms.ModelForm):
         fields = [
             'name', 'description', 'editable', 'deletable', 
             'duplicate_entry', 'private_response', 'can_anonymous_user',
-            'notification_to', 'success_page_content'
+            'notification_to', 'success_page_content', 'file_organization'
         ]
+        widgets = {
+            'file_organization': forms.RadioSelect(),
+        }
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

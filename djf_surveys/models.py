@@ -33,11 +33,48 @@ TYPE_FIELD_CHOICES = [
 
 
 def upload_survey_file(instance, filename):
-    """Generate upload path for survey files."""
+    """
+    Generate upload path for survey files with intelligent organization.
+    
+    File naming format:
+    - By Response: survey_{survey_id}/response_{response_id}/Q{question_id}_{timestamp}_{original_filename}
+    - By Question: survey_{survey_id}/question_{question_id}/R{response_id}_{timestamp}_{original_filename}
+    
+    This ensures:
+    - Easy identification of which response/question the file belongs to
+    - No filename conflicts
+    - Traceable mapping to database records
+    - Clean folder structure
+    """
     import os
     from django.utils.text import get_valid_filename
-    clean_filename = get_valid_filename(filename)
-    return f'survey_uploads/{instance.user_answer.survey.id}/{instance.user_answer.id}/{clean_filename}'
+    from datetime import datetime
+    
+    # Get related objects
+    user_answer = instance.user_answer
+    survey = user_answer.survey
+    question = instance.question
+    
+    # Clean the original filename
+    original_name, ext = os.path.splitext(filename)
+    clean_name = get_valid_filename(original_name)[:50]  # Limit length
+    
+    # Generate timestamp for uniqueness
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    
+    # Get file organization preference
+    org_type = getattr(survey, 'file_organization', 'response')
+    
+    if org_type == 'question':
+        # Organize by question: survey_{id}/question_{q_id}/R{response_id}_{timestamp}_{filename}
+        new_filename = f"R{user_answer.id}_{timestamp}_{clean_name}{ext}"
+        path = f'survey_{survey.id}/question_{question.id}/{new_filename}'
+    else:
+        # Organize by response (default): survey_{id}/response_{r_id}/Q{question_id}_{timestamp}_{filename}
+        new_filename = f"Q{question.id}_{timestamp}_{clean_name}{ext}"
+        path = f'survey_{survey.id}/response_{user_answer.id}/{new_filename}'
+    
+    return path
 
 
 def generate_unique_slug(klass, field, id, identifier='slug'):
@@ -102,6 +139,22 @@ class Survey(BaseModel):
         _("success page content"), blank=True, null=True,
         help_text=_("You can customize the success page here. HTML syntax is supported.")
     )
+    
+    # File organization settings
+    FILE_ORG_BY_RESPONSE = 'response'
+    FILE_ORG_BY_QUESTION = 'question'
+    FILE_ORGANIZATION_CHOICES = [
+        (FILE_ORG_BY_RESPONSE, _('By Response (One folder per submission)')),
+        (FILE_ORG_BY_QUESTION, _('By Question (One folder per question)')),
+    ]
+    
+    file_organization = models.CharField(
+        _("file organization"),
+        max_length=20,
+        choices=FILE_ORGANIZATION_CHOICES,
+        default=FILE_ORG_BY_RESPONSE,
+        help_text=_("Choose how to organize uploaded files: by response or by question")
+    )
 
     class Meta:
         verbose_name = _("survey")
@@ -165,6 +218,58 @@ class Survey(BaseModel):
         """Get URL to download QR code."""
         from django.urls import reverse
         return reverse('djf_surveys:survey_qr_download', kwargs={'slug': self.slug})
+    
+    def get_upload_folder_path(self):
+        """Get the base folder path for this survey's uploads."""
+        return f'survey_{self.id}'
+    
+    def get_all_uploaded_files(self):
+        """
+        Get all uploaded files for this survey.
+        
+        Returns:
+            QuerySet of Answer objects that have file uploads
+        """
+        from djf_surveys.models import Answer, TYPE_FIELD
+        return Answer.objects.filter(
+            user_answer__survey=self,
+            question__type_field=TYPE_FIELD.file,
+            file_value__isnull=False
+        ).exclude(file_value='').select_related('user_answer', 'question')
+    
+    def get_file_statistics(self):
+        """
+        Get statistics about uploaded files.
+        
+        Returns:
+            dict with file count, total size, organization type
+        """
+        import os
+        from django.conf import settings
+        
+        files = self.get_all_uploaded_files()
+        total_size = 0
+        file_count = files.count()
+        
+        for answer in files:
+            if answer.file_value:
+                try:
+                    file_path = os.path.join(settings.MEDIA_ROOT, answer.file_value.name)
+                    if os.path.exists(file_path):
+                        total_size += os.path.getsize(file_path)
+                except:
+                    pass
+        
+        # Convert bytes to human readable
+        size_mb = total_size / (1024 * 1024)
+        
+        return {
+            'file_count': file_count,
+            'total_size_bytes': total_size,
+            'total_size_mb': round(size_mb, 2),
+            'organization_type': self.file_organization,
+            'base_folder': self.get_upload_folder_path(),
+        }
 
 
 class Section(BaseModel):

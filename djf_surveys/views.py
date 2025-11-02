@@ -653,3 +653,120 @@ def survey_qr_download(request, slug):
     response = HttpResponse(buffer.getvalue(), content_type='image/png')
     response['Content-Disposition'] = f'attachment; filename="survey_{survey.slug}_qr.png"'
     return response
+
+
+@login_required
+def download_survey_files(request, slug):
+    """
+    Download all uploaded files for a survey as a ZIP archive.
+    
+    Only accessible by staff/admin users.
+    """
+    from django.http import HttpResponse, HttpResponseForbidden
+    from django.conf import settings
+    import zipfile
+    import io
+    import os
+    from datetime import datetime
+    
+    # Check permissions
+    if not request.user.is_staff:
+        return HttpResponseForbidden("You don't have permission to download survey files")
+    
+    survey = get_object_or_404(Survey, slug=slug)
+    
+    # Get all uploaded files
+    uploaded_files = survey.get_all_uploaded_files()
+    
+    if not uploaded_files.exists():
+        messages.warning(request, "No files have been uploaded for this survey yet.")
+        return redirect('djf_surveys:admin_summary_survey', slug=slug)
+    
+    # Create ZIP file in memory
+    zip_buffer = io.BytesIO()
+    
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+        # Add a README file with survey info
+        readme_content = f"""Survey Files Download
+=====================
+
+Survey Name: {survey.name}
+Survey ID: {survey.id}
+Organization Type: {survey.get_file_organization_display()}
+Download Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+Total Files: {uploaded_files.count()}
+
+File Organization:
+"""
+        if survey.file_organization == 'response':
+            readme_content += """- Files are organized by response/submission
+- Each folder represents one user's submission
+- Filename format: Q{question_id}_{timestamp}_{original_name}
+"""
+        else:
+            readme_content += """- Files are organized by question
+- Each folder contains files for one specific question
+- Filename format: R{response_id}_{timestamp}_{original_name}
+"""
+        
+        readme_content += f"\nFile Mapping:\n"
+        readme_content += "-" * 80 + "\n"
+        
+        # Add files to ZIP
+        added_files = 0
+        for answer in uploaded_files:
+            if answer.file_value:
+                try:
+                    file_path = os.path.join(settings.MEDIA_ROOT, answer.file_value.name)
+                    
+                    if os.path.exists(file_path):
+                        # Add file to ZIP with its relative path
+                        arcname = answer.file_value.name
+                        zip_file.write(file_path, arcname)
+                        added_files += 1
+                        
+                        # Add to README
+                        user = answer.user_answer.user
+                        username = user.username if user else "Anonymous"
+                        readme_content += f"\nFile: {arcname}\n"
+                        readme_content += f"  Question: {answer.question.label[:50]}\n"
+                        readme_content += f"  Response ID: {answer.user_answer.id}\n"
+                        readme_content += f"  User: {username}\n"
+                        readme_content += f"  Uploaded: {answer.created_at.strftime('%Y-%m-%d %H:%M')}\n"
+                        
+                except Exception as e:
+                    # Log error but continue
+                    readme_content += f"\nError accessing file: {answer.file_value.name}\n"
+                    readme_content += f"  Error: {str(e)}\n"
+        
+        # Add statistics
+        stats = survey.get_file_statistics()
+        readme_content += f"\n{'='*80}\n"
+        readme_content += f"Statistics:\n"
+        readme_content += f"  Total files added to ZIP: {added_files}\n"
+        readme_content += f"  Total size: {stats['total_size_mb']} MB\n"
+        
+        # Add README to ZIP
+        zip_file.writestr('README.txt', readme_content)
+        
+        # Add file list as CSV
+        csv_content = "File Path,Question,Response ID,User,Upload Date\n"
+        for answer in uploaded_files:
+            if answer.file_value:
+                user = answer.user_answer.user
+                username = user.username if user else "Anonymous"
+                csv_content += f'"{answer.file_value.name}","{answer.question.label}",{answer.user_answer.id},"{username}","{answer.created_at.strftime("%Y-%m-%d %H:%M")}"\n'
+        
+        zip_file.writestr('file_list.csv', csv_content)
+    
+    # Prepare response
+    zip_buffer.seek(0)
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    filename = f'survey_{survey.slug}_files_{timestamp}.zip'
+    
+    response = HttpResponse(zip_buffer.getvalue(), content_type='application/zip')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    messages.success(request, f"Successfully downloaded {added_files} files from survey '{survey.name}'")
+    
+    return response
