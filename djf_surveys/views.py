@@ -54,6 +54,14 @@ class SurveyListView(ContextTitleMixin, UserPassesTestMixin, ListView):
         context = super().get_context_data(**kwargs)
         page_range = context['page_obj'].paginator.get_elided_page_range(number=page_number)
         context['page_range'] = page_range
+        
+        # Generate QR codes with full domain for all surveys
+        surveys_with_qr = []
+        for survey in context['object_list']:
+            survey.qr_code_with_domain = survey.generate_qr_code(self.request)
+            surveys_with_qr.append(survey)
+        context['object_list'] = surveys_with_qr
+        
         return context
 
 

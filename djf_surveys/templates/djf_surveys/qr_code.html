@@ -77,10 +77,36 @@
             </p>
         </div>
 
+        <!-- Domain Info -->
+        <div class="bg-gradient-to-r from-purple-100 to-blue-100 border-2 border-purple-300 rounded-xl p-6 mb-6">
+            <div class="text-center">
+                <div class="flex items-center justify-center gap-2 mb-3">
+                    <svg class="w-6 h-6 text-purple-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path>
+                    </svg>
+                    <h3 class="text-xl font-bold text-purple-900">Mã QR Đã Bao Gồm Đầy Đủ Địa Chỉ</h3>
+                </div>
+                <div class="bg-white rounded-lg p-4 border-2 border-purple-200">
+                    <p class="text-2xl md:text-3xl font-mono font-bold text-purple-700 break-all">
+                        {{ request.scheme }}://{{ request.get_host }}
+                    </p>
+                    <p class="text-sm text-gray-600 mt-2">
+                        ✓ Mã QR bên dưới đã chứa link đầy đủ, người dân quét là vào được ngay!
+                    </p>
+                </div>
+            </div>
+        </div>
+
         <!-- QR Code Card -->
         <div class="qr-card">
             <div class="text-center mb-6">
                 <img src="{{ qr_code }}" alt="QR Code for {{ survey.name }}" class="qr-image mx-auto">
+                <p class="text-sm text-green-600 font-semibold mt-3">
+                    <svg class="w-5 h-5 inline-block mr-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                    </svg>
+                    Mã QR này đã có domain đầy đủ - In ra và phát ngay!
+                </p>
             </div>
 
             <!-- Survey URL -->
@@ -136,14 +162,39 @@
 
         <!-- Instructions -->
         <div class="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h3 class="font-semibold text-blue-900 mb-2">
-                {% trans "How to use:" %}
+            <h3 class="font-semibold text-blue-900 mb-3 text-lg">
+                📱 Hướng Dẫn Sử Dụng Mã QR:
             </h3>
-            <ul class="text-sm text-blue-800 space-y-1">
-                <li>• {% trans "Open your phone's camera or QR code scanner app" %}</li>
-                <li>• {% trans "Point it at the QR code above" %}</li>
-                <li>• {% trans "Tap the notification to open the survey link" %}</li>
-                <li>• {% trans "You can also download and print this QR code" %}</li>
+            <ul class="text-sm text-blue-800 space-y-2">
+                <li class="flex items-start gap-2">
+                    <span class="font-bold">1.</span>
+                    <span>Mở ứng dụng Camera trên điện thoại (iPhone hoặc Android)</span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <span class="font-bold">2.</span>
+                    <span>Hướng camera vào mã QR phía trên</span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <span class="font-bold">3.</span>
+                    <span>Nhấn vào thông báo xuất hiện để mở link khảo sát</span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <span class="font-bold">4.</span>
+                    <span><strong>Để in QR:</strong> Nhấn nút "Download QR Code" bên trên, sau đó in file PNG ra giấy</span>
+                </li>
+            </ul>
+        </div>
+        
+        <!-- Print Guide -->
+        <div class="mt-4 bg-green-50 border border-green-200 rounded-lg p-4">
+            <h3 class="font-semibold text-green-900 mb-2 text-lg">
+                🖨️ Hướng Dẫn In Ấn:
+            </h3>
+            <ul class="text-sm text-green-800 space-y-1">
+                <li>• <strong>Kích thước khuyên dùng:</strong> 10cm x 10cm (Poster A4) hoặc 5cm x 5cm (Tờ rơi)</li>
+                <li>• <strong>Chất lượng:</strong> In màu, giấy dày 200gsm, cán màng bóng</li>
+                <li>• <strong>Địa điểm dán:</strong> UBND phường, Công An phường, bảng tin khu dân cư</li>
+                <li>• <strong>Số lượng:</strong> 50-100 poster hoặc 500-1000 tờ rơi</li>
             </ul>
         </div>
     </div>
