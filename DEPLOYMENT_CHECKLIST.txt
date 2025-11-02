@@ -1,0 +1,458 @@
+╔════════════════════════════════════════════════════════════════╗
+║     DJANGO SURVEY APP - DEPLOYMENT CHECKLIST                   ║
+║     Công An Phường An Khê - Deployment Guide                   ║
+╚════════════════════════════════════════════════════════════════╝
+
+📋 PHASE 1: PRE-DEPLOYMENT (Local)
+───────────────────────────────────────────────────────────────
+☐ Code đã được test đầy đủ
+☐ Git commit tất cả changes
+☐ Requirements.txt updated
+☐ Documentation đã complete
+☐ .env.example đã tạo
+☐ Backup database hiện tại (nếu có data quan trọng)
+
+📋 PHASE 2: SERVER PREPARATION
+───────────────────────────────────────────────────────────────
+☐ Server Ubuntu 20.04+ hoặc CentOS 7+
+☐ Minimum 2GB RAM (recommend 4GB)
+☐ 2+ CPU cores
+☐ 20GB+ disk space
+☐ Public IP address available
+☐ Root or sudo access
+
+☐ Update system:
+  sudo apt update && sudo apt upgrade -y
+
+☐ Install Docker:
+  curl -fsSL https://get.docker.com -o get-docker.sh
+  sudo sh get-docker.sh
+  sudo usermod -aG docker $USER
+
+☐ Install Docker Compose:
+  sudo curl -L "https://github.com/docker/compose/releases/download/v2.20.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+  sudo chmod +x /usr/local/bin/docker-compose
+
+☐ Verify installations:
+  docker --version
+  docker-compose --version
+  (Logout and login again)
+
+📋 PHASE 3: CODE DEPLOYMENT
+───────────────────────────────────────────────────────────────
+☐ Upload code to server:
+  Method 1: git clone https://github.com/your-repo/django_survey_app.git
+  Method 2: scp -r django_survey_app root@SERVER_IP:/root/
+
+☐ Navigate to project:
+  cd django_survey_app
+
+☐ Verify all files present:
+  ls -la Dockerfile docker-compose.yml nginx/
+
+📋 PHASE 4: CONFIGURATION
+───────────────────────────────────────────────────────────────
+☐ Create .env file:
+  cp .env.example .env
+  nano .env
+
+☐ Generate SECRET_KEY:
+  python3 -c "import secrets; print(secrets.token_urlsafe(50))"
+
+☐ Configure .env variables:
+  ☐ SECRET_KEY=[Generated key from above]
+  ☐ DEBUG=False
+  ☐ DB_NAME=survey_db
+  ☐ DB_USER=survey_user
+  ☐ DB_PASSWORD=[Strong password, min 12 chars]
+  ☐ ALLOWED_HOSTS=localhost,127.0.0.1,[SERVER_IP]
+  ☐ EMAIL settings (optional)
+
+☐ Secure .env file:
+  chmod 600 .env
+
+📋 PHASE 5: DOCKER BUILD & START
+───────────────────────────────────────────────────────────────
+☐ Build Docker images:
+  docker-compose build
+
+☐ Start services:
+  docker-compose up -d
+
+☐ Wait for services to be healthy (30-60 seconds):
+  watch docker-compose ps
+  (All should show "Up (healthy)")
+
+☐ Check logs for errors:
+  docker-compose logs
+
+📋 PHASE 6: DJANGO SETUP
+───────────────────────────────────────────────────────────────
+☐ Run database migrations:
+  docker-compose exec web python manage.py migrate
+
+☐ Create superuser:
+  docker-compose exec web python manage.py createsuperuser
+  Username: [admin]
+  Email: [admin@example.com]
+  Password: [Strong password]
+
+☐ Collect static files:
+  docker-compose exec web python manage.py collectstatic --noinput
+
+📋 PHASE 7: VERIFICATION (HTTP)
+───────────────────────────────────────────────────────────────
+☐ Test from server:
+  curl http://localhost/
+
+☐ Test from external:
+  curl http://[SERVER_IP]/
+
+☐ Open in browser:
+  http://[SERVER_IP]/
+
+☐ Test admin login:
+  http://[SERVER_IP]/admin/
+
+☐ Create test survey
+
+☐ Submit test response
+
+☐ Generate QR code - verify domain shows:
+  http://[SERVER_IP]/qr/test-survey/
+
+☐ Check QR code contains full URL:
+  http://[SERVER_IP]/detail/test-survey/
+
+📋 PHASE 8: FIREWALL CONFIGURATION
+───────────────────────────────────────────────────────────────
+☐ Install UFW (if not installed):
+  sudo apt install ufw
+
+☐ Configure firewall:
+  sudo ufw default deny incoming
+  sudo ufw default allow outgoing
+  sudo ufw allow 22/tcp
+  sudo ufw allow 80/tcp
+  sudo ufw allow 443/tcp
+
+☐ Enable firewall:
+  sudo ufw enable
+
+☐ Verify status:
+  sudo ufw status
+
+📋 PHASE 9: DOMAIN & DNS (If applicable)
+───────────────────────────────────────────────────────────────
+☐ Purchase domain (if needed)
+
+☐ Configure DNS A records:
+  @ (root) → [SERVER_IP]
+  www → [SERVER_IP]
+
+☐ Verify DNS propagation:
+  nslookup your-domain.com
+  ping your-domain.com
+
+☐ Update .env ALLOWED_HOSTS:
+  ALLOWED_HOSTS=localhost,127.0.0.1,[SERVER_IP],your-domain.com,www.your-domain.com
+
+☐ Restart web service:
+  docker-compose restart web
+
+☐ Test domain access:
+  http://your-domain.com/
+
+📋 PHASE 10: SSL CERTIFICATE
+───────────────────────────────────────────────────────────────
+☐ Stop nginx temporarily:
+  docker-compose stop nginx
+
+☐ Run SSL setup script:
+  ./setup-ssl.sh your-domain.com
+
+☐ Verify HTTPS:
+  curl https://your-domain.com/
+  
+☐ Test in browser:
+  https://your-domain.com/
+
+☐ Verify SSL certificate:
+  openssl s_client -connect your-domain.com:443 -servername your-domain.com
+
+☐ Test SSL grade:
+  Visit: https://www.ssllabs.com/ssltest/
+  Enter: your-domain.com
+  (Should get A or A+)
+
+☐ Verify HTTP → HTTPS redirect:
+  curl -I http://your-domain.com/
+  (Should see 301 redirect to https)
+
+📋 PHASE 11: BACKUP SETUP
+───────────────────────────────────────────────────────────────
+☐ Create backup script:
+  cat > backup.sh << 'EOF'
+#!/bin/bash
+DATE=$(date +%Y%m%d_%H%M%S)
+docker-compose exec db pg_dump -U survey_user survey_db > backups/db_$DATE.sql
+tar -czf backups/media_$DATE.tar.gz media/
+find backups/ -name "*.sql" -mtime +7 -delete
+find backups/ -name "*.tar.gz" -mtime +7 -delete
+EOF
+
+☐ Make executable:
+  chmod +x backup.sh
+
+☐ Create backups directory:
+  mkdir -p backups
+
+☐ Test backup:
+  ./backup.sh
+  ls -lh backups/
+
+☐ Setup cron job:
+  crontab -e
+  Add line:
+  0 2 * * * cd /path/to/django_survey_app && ./backup.sh >> /var/log/backup.log 2>&1
+
+📋 PHASE 12: SSL AUTO-RENEWAL
+───────────────────────────────────────────────────────────────
+☐ Create renewal script:
+  cat > renew-ssl.sh << 'EOF'
+#!/bin/bash
+docker run --rm \
+    -v $(pwd)/nginx/ssl:/etc/letsencrypt \
+    certbot/certbot renew \
+    && docker-compose restart nginx
+EOF
+
+☐ Make executable:
+  chmod +x renew-ssl.sh
+
+☐ Test renewal (dry run):
+  docker run --rm \
+    -v $(pwd)/nginx/ssl:/etc/letsencrypt \
+    certbot/certbot renew --dry-run
+
+☐ Setup cron job:
+  crontab -e
+  Add line:
+  0 3 * * 1 cd /path/to/django_survey_app && ./renew-ssl.sh >> /var/log/ssl-renew.log 2>&1
+
+📋 PHASE 13: MONITORING SETUP
+───────────────────────────────────────────────────────────────
+☐ Setup uptime monitoring:
+  - Sign up: https://uptimerobot.com/
+  - Add monitor: https://your-domain.com/
+  - Alert email: [your-email]
+
+☐ Setup log rotation:
+  sudo nano /etc/logrotate.d/django-survey
+  Add:
+  /path/to/django_survey_app/logs/*.log {
+      daily
+      rotate 7
+      compress
+      missingok
+      notifempty
+  }
+
+☐ Test log rotation:
+  sudo logrotate -f /etc/logrotate.d/django-survey
+
+☐ Monitor disk space:
+  df -h
+  (Should have at least 20% free)
+
+📋 PHASE 14: SECURITY AUDIT
+───────────────────────────────────────────────────────────────
+☐ Verify DEBUG=False:
+  docker-compose exec web python manage.py shell
+  >>> from django.conf import settings
+  >>> settings.DEBUG
+  False (Should be False!)
+
+☐ Check deployment warnings:
+  docker-compose exec web python manage.py check --deploy
+  (Should have 0 critical issues)
+
+☐ Verify secure cookies:
+  - Open browser DevTools → Network
+  - Check Set-Cookie headers
+  - Should have: Secure, HttpOnly flags
+
+☐ Test HSTS headers:
+  curl -I https://your-domain.com/
+  (Should see: Strict-Transport-Security header)
+
+☐ Verify HTTPS only:
+  Try: http://your-domain.com/
+  Should redirect to: https://your-domain.com/
+
+☐ Check exposed ports:
+  sudo netstat -tuln | grep LISTEN
+  (Should only see: 22, 80, 443)
+
+☐ Review firewall rules:
+  sudo ufw status verbose
+
+☐ Check for unused Docker images:
+  docker images
+  docker image prune
+
+📋 PHASE 15: FUNCTIONAL TESTING
+───────────────────────────────────────────────────────────────
+☐ Test survey creation:
+  - Login to admin
+  - Create new survey
+  - Add questions
+  - Add sections
+  - Test branching logic
+
+☐ Test survey submission:
+  - Open survey as guest
+  - Fill all fields
+  - Upload file
+  - Submit
+  - Verify response saved
+
+☐ Test QR code:
+  - Generate QR for survey
+  - Verify domain displays on page
+  - Download QR PNG
+  - Scan with phone camera
+  - Verify opens correct URL with full domain
+
+☐ Test admin features:
+  - View responses
+  - Export CSV
+  - Check filters work
+  - Verify device info captured
+
+☐ Test responsive design:
+  - Test on mobile phone
+  - Test on tablet
+  - Test on desktop
+  - All should work smoothly
+
+📋 PHASE 16: DOCUMENTATION
+───────────────────────────────────────────────────────────────
+☐ Create admin credentials document:
+  - Admin username
+  - Admin email
+  - Admin URL
+  - Database credentials
+  - Server IP
+  - Domain name
+
+☐ Document server details:
+  - Server provider
+  - Server IP
+  - SSH key location
+  - Firewall rules
+  - Backup location
+
+☐ Create user guide for Công An staff:
+  - How to create surveys
+  - How to view responses
+  - How to generate QR codes
+  - How to export data
+  - How to print QR codes
+
+☐ Create troubleshooting guide:
+  - Common issues
+  - Solutions
+  - Who to contact
+
+📋 PHASE 17: TRAINING
+───────────────────────────────────────────────────────────────
+☐ Train admin users:
+  - Survey creation
+  - Response management
+  - Data export
+  - QR code generation
+
+☐ Train field staff:
+  - How to distribute QR codes
+  - How to help citizens scan
+  - Basic troubleshooting
+
+☐ Create training materials:
+  - Screenshots
+  - Step-by-step guides
+  - Video tutorials (optional)
+
+📋 PHASE 18: GO LIVE!
+───────────────────────────────────────────────────────────────
+☐ Final verification:
+  ☐ All services running
+  ☐ HTTPS working
+  ☐ Backups configured
+  ☐ Monitoring active
+  ☐ Documentation complete
+  ☐ Team trained
+
+☐ Announce to stakeholders
+
+☐ Print QR codes:
+  - Download QR PNGs
+  - Design posters (A4, 10cm x 10cm QR)
+  - Print on 200gsm paper
+  - Laminate for durability
+
+☐ Distribute QR codes:
+  - UBND phường
+  - Công An phường
+  - Community boards
+  - Public areas
+
+☐ Monitor first week:
+  - Check logs daily
+  - Monitor submissions
+  - Respond to issues quickly
+  - Gather feedback
+
+📋 PHASE 19: POST-DEPLOYMENT
+───────────────────────────────────────────────────────────────
+☐ Week 1 Review:
+  - Number of responses
+  - Any errors in logs
+  - Performance metrics
+  - User feedback
+
+☐ Month 1 Review:
+  - System stability
+  - Backup verification
+  - SSL certificate status
+  - Disk space usage
+
+☐ Quarterly Review:
+  - System updates needed
+  - Feature requests
+  - Performance optimization
+  - Scale if needed
+
+╔════════════════════════════════════════════════════════════════╗
+║                    DEPLOYMENT COMPLETE! 🎉                     ║
+║                                                                ║
+║  Công An Phường An Khê - Survey System is now LIVE!           ║
+║  Ready to serve the community! 🏛️                             ║
+╚════════════════════════════════════════════════════════════════╝
+
+📞 SUPPORT CONTACTS:
+───────────────────────────────────────────────────────────────
+Server Issues: [Your contact]
+Application Issues: [Your contact]
+Emergency: [24/7 contact]
+
+🔗 IMPORTANT LINKS:
+───────────────────────────────────────────────────────────────
+Production URL: https://your-domain.com/
+Admin Panel: https://your-domain.com/admin/
+Documentation: See *.md files in project root
+
+✅ CHECKLIST COMPLETED: ___ / ___ tasks
+📅 DEPLOYMENT DATE: _______________
+👤 DEPLOYED BY: _______________
+📝 NOTES: _______________________________________________

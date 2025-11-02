@@ -1,0 +1,19 @@
+version: '3.8'
+
+# Development override for docker-compose.yml
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+services:
+  web:
+    environment:
+      - DEBUG=True
+      - DJANGO_SETTINGS_MODULE=moi.settings
+    command: python manage.py runserver 0.0.0.0:8000
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./:/app
+
+  nginx:
+    ports:
+      - "8080:80"
